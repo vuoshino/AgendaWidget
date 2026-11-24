@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#120F2B</color>
+    <color name="card">#221C47</color>
+    <color name="card_border">#332B66</color>
+    <color name="accent">#8C7CFF</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3FFFFFF</color>
+    <color name="text_muted">#80FFFFFF</color>
+    <color name="success">#9FE1CB</color>
+    <color name="danger">#F09595</color>
+    <color name="widget_bg">#38B0A0FF</color>
+    <color name="glass">#38FFFFFF</color>
+    <color name="glass_soft">#24FFFFFF</color>
+</resources>

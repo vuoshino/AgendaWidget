@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Agenda</string>
+    <string name="widget_name">Agenda</string>
+    <string name="widget_desc">Eventi e promemoria Google</string>
+    <string name="empty">Nessun impegno in arrivo</string>
+    <string name="calendar_title">Calendario</string>
+    <string name="calendar_ok">Accesso agli eventi attivo</string>
+    <string name="calendar_missing">Serve il permesso per leggere gli eventi</string>
+    <string name="calendar_grant">Consenti accesso</string>
+    <string name="tasks_title">Promemoria Google</string>
+    <string name="tasks_off">Non collegati</string>
+    <string name="tasks_on">Collegati</string>
+    <string name="tasks_connect">Collega account Google</string>
+    <string name="tasks_disconnect">Scollega</string>
+    <string name="refresh">Aggiorna il widget</string>
+    <string name="hint">Aggiungi il widget dalla home: tieni premuto su uno spazio vuoto, poi Widget e Agenda. Puoi allargarlo o stringerlo trascinando i bordi.</string>
+</resources>

@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'it.tiziano.agenda'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'it.tiziano.agenda'
+        minSdk 31
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        fixed {
+            storeFile file('keystore/agenda.jks')
+            storePassword 'agendawidget'
+            keyAlias 'agenda'
+            keyPassword 'agendawidget'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.fixed
+        }
+        debug {
+            signingConfig signingConfigs.fixed
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+}
