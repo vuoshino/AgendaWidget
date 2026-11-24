@@ -63,6 +63,12 @@ public class AgendaWidget extends AppWidgetProvider {
     private static RemoteViews build(Context c, List<AgendaData.Row> rows, boolean narrow) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda);
 
+        // Sfondo: colore e opacità scelti nell'app
+        int alpha = Math.round(Store.getBgOpacity(c) * 2.55f);
+        v.setInt(R.id.bg_fill, "setColorFilter", Store.getBgColor(c));
+        v.setInt(R.id.bg_fill, "setImageAlpha", alpha);
+        v.setInt(R.id.bg_shade, "setImageAlpha", alpha);
+
         LocalDate today = LocalDate.now();
         Locale it = Locale.ITALIAN;
         v.setTextViewText(R.id.day_name,

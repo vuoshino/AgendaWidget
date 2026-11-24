@@ -114,6 +114,7 @@ public final class AgendaData {
                     CalendarContract.Instances.ALL_DAY,
                     CalendarContract.Instances.DISPLAY_COLOR,
             };
+            java.util.Set<String> seen = new java.util.HashSet<>();
             try (Cursor cur = c.getContentResolver().query(b.build(), projection,
                     CalendarContract.Instances.VISIBLE + "=1", null,
                     CalendarContract.Instances.BEGIN + " ASC")) {
@@ -134,6 +135,11 @@ public final class AgendaData {
                         }
                         if (day.isBefore(today)) day = today;
                         if (day.isAfter(last)) continue;
+
+                        // Stesso evento in più calendari (es. festività doppie): una volta sola
+                        String key = String.valueOf(cur.getString(1)).trim().toLowerCase(IT)
+                                + "|" + begin + "|" + allDay;
+                        if (!seen.add(key)) continue;
 
                         Row r = new Row();
                         r.type = TYPE_EVENT;

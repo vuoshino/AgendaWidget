@@ -8,6 +8,10 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.graphics.drawable.GradientDrawable;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,6 +62,8 @@ public class MainActivity extends Activity {
             AgendaWidget.renderAll(this);
             refreshUi();
         });
+        setupLook();
+
         findViewById(R.id.refresh_button).setOnClickListener(v -> {
             AgendaWidget.renderAll(this);
             RefreshJob.runNow(this);
@@ -167,5 +173,78 @@ public class MainActivity extends Activity {
         tasksStatus.setText(status);
         tasksConnect.setVisibility(connected ? View.GONE : View.VISIBLE);
         tasksDisconnect.setVisibility(connected ? View.VISIBLE : View.GONE);
+    }
+
+    // Aspetto
+
+    private void setupLook() {
+        LinearLayout row = findViewById(R.id.swatches);
+        float d = getResources().getDisplayMetrics().density;
+        int size = Math.round(34 * d);
+        for (int i = 0; i < Store.COLORS.length; i++) {
+            final int color = Store.COLORS[i];
+            View dot = new View(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+            if (i > 0) lp.setMarginStart(Math.round(12 * d));
+            dot.setLayoutParams(lp);
+            dot.setTag(color);
+            dot.setContentDescription(Store.COLOR_NAMES[i]);
+            dot.setOnClickListener(v -> {
+                Store.setBgColor(this, color);
+                updateLook();
+                AgendaWidget.renderAll(this);
+            });
+            row.addView(dot);
+        }
+
+        SeekBar bar = findViewById(R.id.opacity);
+        bar.setProgress(Store.getBgOpacity(this));
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+                if (!fromUser) return;
+                Store.setBgOpacity(MainActivity.this, progress);
+                updateLook();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar s) {
+                AgendaWidget.renderAll(MainActivity.this);
+            }
+        });
+        updateLook();
+    }
+
+    private void updateLook() {
+        int selected = Store.getBgColor(this);
+        int opacity = Store.getBgOpacity(this);
+        float d = getResources().getDisplayMetrics().density;
+
+        LinearLayout row = findViewById(R.id.swatches);
+        for (int i = 0; i < row.getChildCount(); i++) {
+            View dot = row.getChildAt(i);
+            int color = (int) dot.getTag();
+            GradientDrawable g = new GradientDrawable();
+            g.setShape(GradientDrawable.OVAL);
+            g.setColor(color);
+            if (color == selected) {
+                g.setStroke(Math.round(2.5f * d), 0xFFFFFFFF);
+            } else {
+                g.setStroke(Math.round(1 * d), 0x40FFFFFF);
+            }
+            dot.setBackground(g);
+            if (color == selected) {
+                ((TextView) findViewById(R.id.swatch_name)).setText(Store.COLOR_NAMES[i]);
+            }
+        }
+
+        ImageView fill = findViewById(R.id.preview_fill);
+        fill.setColorFilter(selected);
+        fill.setImageAlpha(Math.round(opacity * 2.55f));
+        ((TextView) findViewById(R.id.opacity_label)).setText("Opacità " + opacity + "%");
     }
 }

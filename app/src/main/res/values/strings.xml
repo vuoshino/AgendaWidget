@@ -15,4 +15,6 @@
     <string name="tasks_disconnect">Scollega</string>
     <string name="refresh">Aggiorna il widget</string>
     <string name="hint">Aggiungi il widget dalla home: tieni premuto su uno spazio vuoto, poi Widget e Agenda. Puoi allargarlo o stringerlo trascinando i bordi.</string>
+    <string name="look_title">Aspetto del widget</string>
+    <string name="look_preview">Anteprima</string>
 </resources>

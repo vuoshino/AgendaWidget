@@ -111,4 +111,27 @@ public final class Store {
     public static long getLastSync(Context c) {
         return prefs(c).getLong(KEY_SYNC, 0);
     }
+
+    // Aspetto del widget
+
+    /** Colori proposti: il primo riprende il widget Meteo di Samsung di sera. */
+    public static final int[] COLORS = {0xFF1A2857, 0xFF2E2A6E, 0xFF4B3A8F, 0xFF22242C, 0xFF000000, 0xFFB0A0FF};
+    public static final String[] COLOR_NAMES = {"Blu notte (come Meteo)", "Indaco", "Viola", "Grafite", "Nero", "Lavanda"};
+
+    public static int getBgColor(Context c) {
+        return prefs(c).getInt("bg_color", COLORS[0]);
+    }
+
+    public static void setBgColor(Context c, int color) {
+        prefs(c).edit().putInt("bg_color", color).apply();
+    }
+
+    /** Opacità da 0 a 100. */
+    public static int getBgOpacity(Context c) {
+        return prefs(c).getInt("bg_opacity", 100);
+    }
+
+    public static void setBgOpacity(Context c, int opacity) {
+        prefs(c).edit().putInt("bg_opacity", Math.max(0, Math.min(100, opacity))).apply();
+    }
 }
