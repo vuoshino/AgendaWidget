@@ -128,7 +128,7 @@ public class AgendaWidget extends AppWidgetProvider {
         // Elenco
         RemoteViews.RemoteCollectionItems.Builder items = new RemoteViews.RemoteCollectionItems.Builder();
         items.setHasStableIds(false);
-        items.setViewTypeCount(4);
+        items.setViewTypeCount(5);
         long index = 0;
         for (AgendaData.Row r : rows) {
             items.addItem(index++, item(c, r));
@@ -178,6 +178,11 @@ public class AgendaWidget extends AppWidgetProvider {
                         .putExtra(ActionActivity.EXTRA_EVENT, r.eventId)
                         .putExtra(ActionActivity.EXTRA_BEGIN, r.begin)
                         .putExtra(ActionActivity.EXTRA_END, r.end));
+                return v;
+            }
+            case AgendaData.TYPE_NOTE: {
+                RemoteViews v = new RemoteViews(pkg, R.layout.item_note);
+                v.setTextViewText(R.id.text, r.title);
                 return v;
             }
             default: {

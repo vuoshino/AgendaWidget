@@ -27,6 +27,7 @@ public final class AgendaData {
     public static final int TYPE_SUMMARY = 1;
     public static final int TYPE_TASK = 2;
     public static final int TYPE_EVENT = 3;
+    public static final int TYPE_NOTE = 4;
 
     private static final int DAYS_AHEAD = 14;
     private static final int MAX_ROWS = 60;
@@ -166,6 +167,16 @@ public final class AgendaData {
             s.title = overdue.size() + " in ritardo " + (open ? "\u25B4" : "\u25BE");
             rows.add(s);
             if (open) rows.addAll(overdue);
+        }
+        // Oggi sempre presente, anche se libero
+        DayGroup todayGroup = days.get(today);
+        boolean anythingElse = !rows.isEmpty() || !days.isEmpty() || !undated.isEmpty();
+        if (anythingElse && (todayGroup == null || (todayGroup.tasks.isEmpty() && todayGroup.events.isEmpty()))) {
+            rows.add(day("Oggi"));
+            Row n = new Row();
+            n.type = TYPE_NOTE;
+            n.title = "Nessun impegno";
+            rows.add(n);
         }
         for (Map.Entry<LocalDate, DayGroup> e : days.entrySet()) {
             DayGroup g = e.getValue();
