@@ -116,8 +116,9 @@ public class AgendaWidget extends AppWidgetProvider {
                 .putExtra(ActionActivity.EXTRA_ACTION, ActionActivity.ACTION_OPEN_CALENDAR)
                 .putExtra(ActionActivity.EXTRA_WIDGET, widgetId)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Deve essere modificabile: solo così il launcher può aggiungere la posizione del tocco
         v.setOnClickPendingIntent(R.id.header, PendingIntent.getActivity(c, 1000 + widgetId, openCalendar,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+                PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
 
         // Pulsante +: nuovo evento
         Intent newEvent = new Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
