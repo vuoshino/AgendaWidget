@@ -151,15 +151,19 @@ public final class Store {
         prefs(c).edit().putInt(k(c, "bg_opacity"), Math.max(0, Math.min(100, opacity))).apply();
     }
 
-    /** Posizione sullo schermo di un widget, rilevata toccando la data: {sinistra, alto, largSchermo, altSchermo}. */
+    /**
+     * Posizione di un widget sullo schermo, in pixel:
+     * {sinistra, alto, largSchermo, altSchermo} oppure {sinistra, alto, largSchermo, altSchermo, larghezza, altezza}.
+     */
     public static int[] getPlacement(Context c, int widgetId) {
         String raw = prefs(c).getString("place_" + widgetId, null);
         if (raw == null) return null;
         String[] p = raw.split(",");
-        if (p.length != 4) return null;
+        if (p.length != 4 && p.length != 6) return null;
         try {
-            return new int[]{Integer.parseInt(p[0]), Integer.parseInt(p[1]),
-                    Integer.parseInt(p[2]), Integer.parseInt(p[3])};
+            int[] out = new int[p.length];
+            for (int i = 0; i < p.length; i++) out[i] = Integer.parseInt(p[i]);
+            return out;
         } catch (NumberFormatException e) {
             return null;
         }
@@ -171,6 +175,19 @@ public final class Store {
         if (raw.equals(prefs(c).getString("place_" + widgetId, null))) return false;
         prefs(c).edit().putString("place_" + widgetId, raw).apply();
         return true;
+    }
+
+    public static void setPlacement(Context c, int widgetId, android.graphics.Rect r, int screenW, int screenH) {
+        prefs(c).edit().putString("place_" + widgetId, r.left + "," + r.top + "," + screenW + "," + screenH
+                + "," + r.width() + "," + r.height()).apply();
+    }
+
+    public static boolean isCalibrating(Context c) {
+        return prefs(c).getBoolean("calibrating", false);
+    }
+
+    public static void setCalibrating(Context c, boolean on) {
+        prefs(c).edit().putBoolean("calibrating", on).apply();
     }
 
     public static boolean anyPlacement(Context c) {

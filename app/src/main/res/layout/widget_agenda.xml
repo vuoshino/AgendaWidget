@@ -96,4 +96,41 @@
         android:textSize="13sp"
         android:visibility="gone" />
 </LinearLayout>
+
+    <!-- Segni magenta per l'allineamento tramite screenshot: visibili solo durante la calibrazione -->
+    <ImageView
+        android:id="@+id/mark_top"
+        android:layout_width="44dp"
+        android:layout_height="7dp"
+        android:layout_gravity="top|center_horizontal"
+        android:src="@drawable/mark"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/mark_bottom"
+        android:layout_width="44dp"
+        android:layout_height="7dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:src="@drawable/mark"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/mark_left"
+        android:layout_width="7dp"
+        android:layout_height="44dp"
+        android:layout_gravity="start|center_vertical"
+        android:src="@drawable/mark"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/mark_right"
+        android:layout_width="7dp"
+        android:layout_height="44dp"
+        android:layout_gravity="end|center_vertical"
+        android:src="@drawable/mark"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
 </FrameLayout>

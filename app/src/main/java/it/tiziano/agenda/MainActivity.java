@@ -28,6 +28,7 @@ public class MainActivity extends Activity {
     private static final int REQ_CALENDAR = 1;
     private static final int REQ_AUTH = 2;
     private static final int REQ_WALLPAPER = 3;
+    private static final int REQ_SHOT = 4;
 
     private TextView calendarStatus;
     private TextView calendarButton;
@@ -101,6 +102,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_SHOT) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) alignFromShot(data.getData());
+            return;
+        }
         if (requestCode == REQ_WALLPAPER) {
             if (resultCode == RESULT_OK && data != null && data.getData() != null) importWallpaper(data.getData());
             return;
@@ -204,15 +209,21 @@ public class MainActivity extends Activity {
 
         findViewById(R.id.style_solid).setOnClickListener(v -> setStyle(Store.STYLE_SOLID));
         findViewById(R.id.style_glass).setOnClickListener(v -> setStyle(Store.STYLE_GLASS));
-        findViewById(R.id.glass_pick).setOnClickListener(v -> {
-            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                    .addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("image/*");
-            try {
-                startActivityForResult(pick, REQ_WALLPAPER);
-            } catch (android.content.ActivityNotFoundException e) {
-                Toast.makeText(this, "Nessuna app per scegliere immagini", Toast.LENGTH_SHORT).show();
+        findViewById(R.id.glass_pick).setOnClickListener(v -> pickImage(REQ_WALLPAPER));
+
+        findViewById(R.id.glass_align).setOnClickListener(v -> {
+            if (!Store.isCalibrating(this)) {
+                Store.setCalibrating(this, true);
+                AgendaWidget.renderAll(this);
+                updateLook();
+            } else {
+                pickImage(REQ_SHOT);
             }
+        });
+        findViewById(R.id.glass_cancel).setOnClickListener(v -> {
+            Store.setCalibrating(this, false);
+            AgendaWidget.renderAll(this);
+            updateLook();
         });
 
         SeekBar blur = findViewById(R.id.blur);
@@ -275,6 +286,78 @@ public class MainActivity extends Activity {
         updateLook();
     }
 
+    private void pickImage(int request) {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("image/*");
+        try {
+            startActivityForResult(pick, request);
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, "Nessuna app per scegliere immagini", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void alignFromShot(android.net.Uri uri) {
+        TextView status = findViewById(R.id.glass_status);
+        status.setText("Cerco il widget nello screenshot…");
+        new Thread(() -> {
+            Calibrate.Result r = null;
+            String error = null;
+            try {
+                r = Calibrate.find(this, uri);
+            } catch (Exception e) {
+                error = e.getMessage() != null ? e.getMessage() : e.toString();
+            }
+            final Calibrate.Result res = r;
+            final String err = error;
+            runOnUiThread(() -> {
+                if (res == null) {
+                    Toast.makeText(this, err != null ? "Immagine non valida: " + err
+                            : "Non trovo i segni viola: lo screenshot deve mostrare il widget con i segni sui bordi",
+                            Toast.LENGTH_LONG).show();
+                } else {
+                    int id = pickWidget(res.widget.width(), res.widget.height());
+                    if (id >= 0) {
+                        Store.setPlacement(this, id, res.widget, res.screenW, res.screenH);
+                        Store.setCalibrating(this, false);
+                        Toast.makeText(this, "Widget allineato", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Nessun widget Agenda sulla home", Toast.LENGTH_LONG).show();
+                    }
+                }
+                AgendaWidget.renderAll(this);
+                updateLook();
+            });
+        }).start();
+    }
+
+    /** Con più widget (es. schermo esterno e interno), sceglie quello con le misure più simili. */
+    private int pickWidget(int wPx, int hPx) {
+        android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(this);
+        int[] ids = m.getAppWidgetIds(new android.content.ComponentName(this, AgendaWidget.class));
+        if (ids == null || ids.length == 0) return -1;
+        if (ids.length == 1) return ids[0];
+        float d = getResources().getDisplayMetrics().density;
+        int best = ids[0];
+        float bestDiff = Float.MAX_VALUE;
+        for (int id : ids) {
+            Bundle o = m.getAppWidgetOptions(id);
+            int[][] sizes = {
+                    {o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
+                            o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)},
+                    {o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH),
+                            o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)}};
+            for (int[] sz : sizes) {
+                float diff = Math.abs(sz[0] * d - wPx) + Math.abs(sz[1] * d - hPx);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    best = id;
+                }
+            }
+        }
+        return best;
+    }
+
     private void setStyle(int style) {
         Store.setStyle(this, style);
         ((SeekBar) findViewById(R.id.opacity)).setProgress(Store.getBgOpacity(this));
@@ -312,12 +395,21 @@ public class MainActivity extends Activity {
         if (!hasWall) {
             gs = "Scegli dalla galleria la stessa immagine che usi come sfondo della home: "
                     + "verrà sfocata e colorata come le cartelle di One UI.";
+        } else if (Store.isCalibrating(this)) {
+            gs = "Sui bordi del widget sono comparsi quattro segni viola. Vai alla home, fai uno screenshot "
+                    + "(tasto laterale + volume giù), torna qui e tocca «Scegli lo screenshot».";
         } else if (!Store.anyPlacement(this)) {
-            gs = "Sfondo pronto. Ora tocca una volta la data in alto sul widget: "
-                    + "così l'app capisce dove si trova e allinea lo sfondo.";
+            gs = "Sfondo pronto. Ora tocca «Allinea con uno screenshot»: serve a capire "
+                    + "dove si trova il widget sulla home.";
         } else {
-            gs = "Sfondo allineato. Se sposti il widget, tocca di nuovo la sua data.";
+            gs = "Sfondo allineato. Se sposti o ridimensioni il widget, rifai l'allineamento.";
         }
+        boolean cal = Store.isCalibrating(this);
+        TextView align = findViewById(R.id.glass_align);
+        align.setText(cal ? "Scegli lo screenshot" : "Allinea con uno screenshot");
+        align.setVisibility(hasWall ? View.VISIBLE : View.GONE);
+        findViewById(R.id.glass_cancel).setVisibility(cal ? View.VISIBLE : View.GONE);
+        findViewById(R.id.glass_pick).setBackgroundResource(hasWall ? R.drawable.bg_button_ghost : R.drawable.bg_button);
         ((TextView) findViewById(R.id.glass_status)).setText(gs);
         ((TextView) findViewById(R.id.blur_label)).setText("Sfocatura " + Store.getBlur(this) + "%");
         findViewById(R.id.blur_label).setVisibility(hasWall ? View.VISIBLE : View.GONE);

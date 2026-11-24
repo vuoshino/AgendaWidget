@@ -66,7 +66,7 @@ public class AgendaWidget extends AppWidgetProvider {
         if (Store.getStyle(c) != Store.STYLE_GLASS || !Glass.hasWallpaper(c)) return null;
         int[] p = Store.getPlacement(c, id);
         if (p == null) return null;
-        int[] size = sizePx(c, manager, id, p[2], p[3]);
+        int[] size = p.length == 6 ? new int[]{p[4], p[5]} : sizePx(c, manager, id, p[2], p[3]);
         return Glass.render(c, p[0], p[1], size[0], size[1], p[2], p[3],
                 Store.getBgColor(c), Store.getBgOpacity(c));
     }
@@ -86,6 +86,13 @@ public class AgendaWidget extends AppWidgetProvider {
     private static RemoteViews build(Context c, int widgetId, List<AgendaData.Row> rows,
                                      boolean narrow, Bitmap glass) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda);
+
+        // Segni per l'allineamento tramite screenshot
+        int marks = Store.isCalibrating(c) ? View.VISIBLE : View.GONE;
+        v.setViewVisibility(R.id.mark_top, marks);
+        v.setViewVisibility(R.id.mark_bottom, marks);
+        v.setViewVisibility(R.id.mark_left, marks);
+        v.setViewVisibility(R.id.mark_right, marks);
 
         // Sfondo: pieno (colore + opacità) oppure vetro come le cartelle
         if (glass != null) {
