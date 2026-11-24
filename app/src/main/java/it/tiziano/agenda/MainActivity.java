@@ -226,6 +226,8 @@ public class MainActivity extends Activity {
             updateLook();
         });
 
+        findViewById(R.id.glass_preset).setOnClickListener(v -> applyFolderPreset());
+
         SeekBar transp = findViewById(R.id.transp);
         transp.setProgress(Store.getGlassTransparency(this));
         transp.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -376,6 +378,30 @@ public class MainActivity extends Activity {
             }
         }
         return best;
+    }
+
+    /** Valori misurati sulle cartelle di One UI: lilla al 30%, sfocatura 65%, nessuna trasparenza. */
+    private void applyFolderPreset() {
+        Store.setBgColor(this, Store.COLORS[1]);
+        Store.setBgOpacity(this, 30);
+        Store.setBlur(this, 65);
+        Store.setGlassTransparency(this, 0);
+        ((SeekBar) findViewById(R.id.opacity)).setProgress(30);
+        ((SeekBar) findViewById(R.id.blur)).setProgress(65);
+        ((SeekBar) findViewById(R.id.transp)).setProgress(0);
+        updateLook();
+        new Thread(() -> {
+            try {
+                Glass.rebuild(this);
+            } catch (Exception ignored) {
+                // resta la sfocatura precedente
+            }
+            runOnUiThread(() -> {
+                updateLook();
+                AgendaWidget.renderAll(this);
+                Toast.makeText(this, "Impostato come le cartelle", Toast.LENGTH_SHORT).show();
+            });
+        }).start();
     }
 
     private void setStyle(int style) {
