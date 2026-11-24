@@ -213,4 +213,13 @@ public final class Store {
     public static void setBlur(Context c, int blur) {
         prefs(c).edit().putInt("glass_blur", Math.max(0, Math.min(100, blur))).apply();
     }
+
+    /** Trasparenza del vetro, da 0 (pieno) a 100 (invisibile). */
+    public static int getGlassTransparency(Context c) {
+        return prefs(c).getInt("glass_transparency", 0);
+    }
+
+    public static void setGlassTransparency(Context c, int t) {
+        prefs(c).edit().putInt("glass_transparency", Math.max(0, Math.min(100, t))).apply();
+    }
 }

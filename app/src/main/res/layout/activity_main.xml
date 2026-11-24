@@ -251,6 +251,23 @@
                         android:max="100"
                         android:progressTint="@color/accent"
                         android:thumbTint="@color/accent" />
+
+                    <TextView
+                        android:id="@+id/transp_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                    <SeekBar
+                        android:id="@+id/transp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:max="100"
+                        android:progressTint="@color/accent"
+                        android:thumbTint="@color/accent" />
                 </LinearLayout>
 
                 <FrameLayout

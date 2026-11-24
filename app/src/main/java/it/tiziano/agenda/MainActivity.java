@@ -226,6 +226,26 @@ public class MainActivity extends Activity {
             updateLook();
         });
 
+        SeekBar transp = findViewById(R.id.transp);
+        transp.setProgress(Store.getGlassTransparency(this));
+        transp.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+                if (!fromUser) return;
+                Store.setGlassTransparency(MainActivity.this, progress);
+                updateLook();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar s) {
+                AgendaWidget.renderAll(MainActivity.this);
+            }
+        });
+
         SeekBar blur = findViewById(R.id.blur);
         blur.setProgress(Store.getBlur(this));
         blur.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -414,6 +434,10 @@ public class MainActivity extends Activity {
         ((TextView) findViewById(R.id.blur_label)).setText("Sfocatura " + Store.getBlur(this) + "%");
         findViewById(R.id.blur_label).setVisibility(hasWall ? View.VISIBLE : View.GONE);
         findViewById(R.id.blur).setVisibility(hasWall ? View.VISIBLE : View.GONE);
+        ((TextView) findViewById(R.id.transp_label)).setText(
+                "Trasparenza " + Store.getGlassTransparency(this) + "%");
+        findViewById(R.id.transp_label).setVisibility(hasWall ? View.VISIBLE : View.GONE);
+        findViewById(R.id.transp).setVisibility(hasWall ? View.VISIBLE : View.GONE);
 
         int selected = Store.getBgColor(this);
         int opacity = Store.getBgOpacity(this);
@@ -451,7 +475,7 @@ public class MainActivity extends Activity {
         if (glassPreview != null) {
             fill.setImageBitmap(glassPreview);
             fill.clearColorFilter();
-            fill.setImageAlpha(255);
+            fill.setImageAlpha(Math.round((100 - Store.getGlassTransparency(this)) * 2.55f));
         } else {
             fill.setImageResource(R.drawable.bg_preview);
             fill.setColorFilter(selected);

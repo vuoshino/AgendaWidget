@@ -98,7 +98,8 @@ public class AgendaWidget extends AppWidgetProvider {
         if (glass != null) {
             v.setImageViewBitmap(R.id.bg_fill, glass);
             v.setInt(R.id.bg_fill, "setColorFilter", 0);
-            v.setInt(R.id.bg_fill, "setImageAlpha", 255);
+            v.setInt(R.id.bg_fill, "setImageAlpha",
+                    Math.round((100 - Store.getGlassTransparency(c)) * 2.55f));
             v.setInt(R.id.bg_shade, "setImageAlpha", 0);
         } else {
             boolean glassStyle = Store.getStyle(c) == Store.STYLE_GLASS;
