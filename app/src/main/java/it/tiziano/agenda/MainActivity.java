@@ -215,6 +215,44 @@ public class MainActivity extends Activity {
             }
         });
 
+        SeekBar blur = findViewById(R.id.blur);
+        blur.setProgress(Store.getBlur(this));
+        blur.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+                if (!fromUser) return;
+                Store.setBlur(MainActivity.this, progress);
+                ((TextView) findViewById(R.id.blur_label)).setText("Sfocatura " + progress + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar s) {
+                if (!Glass.canAdjust(MainActivity.this)) {
+                    if (Glass.hasWallpaper(MainActivity.this)) {
+                        Toast.makeText(MainActivity.this,
+                                "Scegli di nuovo lo sfondo per poter regolare la sfocatura",
+                                Toast.LENGTH_LONG).show();
+                    }
+                    return;
+                }
+                new Thread(() -> {
+                    try {
+                        Glass.rebuild(MainActivity.this);
+                    } catch (Exception ignored) {
+                        // resta la sfocatura precedente
+                    }
+                    runOnUiThread(() -> {
+                        updateLook();
+                        AgendaWidget.renderAll(MainActivity.this);
+                    });
+                }).start();
+            }
+        });
+
         SeekBar bar = findViewById(R.id.opacity);
         bar.setProgress(Store.getBgOpacity(this));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -281,6 +319,9 @@ public class MainActivity extends Activity {
             gs = "Sfondo allineato. Se sposti il widget, tocca di nuovo la sua data.";
         }
         ((TextView) findViewById(R.id.glass_status)).setText(gs);
+        ((TextView) findViewById(R.id.blur_label)).setText("Sfocatura " + Store.getBlur(this) + "%");
+        findViewById(R.id.blur_label).setVisibility(hasWall ? View.VISIBLE : View.GONE);
+        findViewById(R.id.blur).setVisibility(hasWall ? View.VISIBLE : View.GONE);
 
         int selected = Store.getBgColor(this);
         int opacity = Store.getBgOpacity(this);

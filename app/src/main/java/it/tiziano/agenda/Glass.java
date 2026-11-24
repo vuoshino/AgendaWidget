@@ -20,8 +20,10 @@ import java.io.IOException;
 public final class Glass {
 
     private static final String FILE = "wall_blur.png";
+    private static final String BASE = "wall_base.png";
+    /** Raggio massimo della sfocatura, sull'immagine ridotta a 360 px. */
+    private static final int MAX_RADIUS = 16;
     private static final int BASE_WIDTH = 360;
-    private static final int BLUR_RADIUS = 9;
     /** Il bitmap del widget è a un terzo della risoluzione: è sfocato, non si nota. */
     private static final int SCALE_DOWN = 3;
 
@@ -46,17 +48,38 @@ public final class Glass {
         Bitmap small = Bitmap.createScaledBitmap(src, BASE_WIDTH, h, true)
                 .copy(Bitmap.Config.ARGB_8888, true);
         src.recycle();
-        blur(small, BLUR_RADIUS);
-        try (FileOutputStream out = new FileOutputStream(new File(c.getFilesDir(), FILE))) {
-            small.compress(Bitmap.CompressFormat.PNG, 100, out);
-        }
+        save(c, BASE, small);
+        rebuild(c);
+    }
+
+    public static boolean canAdjust(Context c) {
+        return new File(c.getFilesDir(), BASE).exists();
+    }
+
+    /** Rifà la sfocatura con l'intensità scelta nelle impostazioni. */
+    public static void rebuild(Context c) throws IOException {
+        File base = new File(c.getFilesDir(), BASE);
+        if (!base.exists()) return;
+        Bitmap b = BitmapFactory.decodeFile(base.getAbsolutePath());
+        if (b == null) return;
+        b = b.copy(Bitmap.Config.ARGB_8888, true);
+        int radius = Math.round(Store.getBlur(c) * MAX_RADIUS / 100f);
+        if (radius > 0) blur(b, radius);
+        save(c, FILE, b);
         synchronized (Glass.class) {
-            cache = small;
+            cache = b;
+        }
+    }
+
+    private static void save(Context c, String name, Bitmap b) throws IOException {
+        try (FileOutputStream out = new FileOutputStream(new File(c.getFilesDir(), name))) {
+            b.compress(Bitmap.CompressFormat.PNG, 100, out);
         }
     }
 
     public static void clear(Context c) {
         new File(c.getFilesDir(), FILE).delete();
+        new File(c.getFilesDir(), BASE).delete();
         synchronized (Glass.class) {
             cache = null;
         }

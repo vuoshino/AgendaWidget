@@ -187,4 +187,13 @@ public final class Store {
     public static void toggleOverdue(Context c) {
         prefs(c).edit().putBoolean("overdue_open", !isOverdueOpen(c)).apply();
     }
+
+    /** Intensità della sfocatura in stile vetro, da 0 a 100. */
+    public static int getBlur(Context c) {
+        return prefs(c).getInt("glass_blur", 55);
+    }
+
+    public static void setBlur(Context c, int blur) {
+        prefs(c).edit().putInt("glass_blur", Math.max(0, Math.min(100, blur))).apply();
+    }
 }
