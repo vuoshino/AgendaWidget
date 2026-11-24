@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.CalendarContract;
@@ -51,23 +52,56 @@ public class AgendaWidget extends AppWidgetProvider {
         if (ids == null || ids.length == 0) return;
 
         List<AgendaData.Row> rows = AgendaData.build(c);
-        Map<SizeF, RemoteViews> sizes = new ArrayMap<>();
-        sizes.put(new SizeF(100f, 80f), build(c, rows, true));
-        sizes.put(new SizeF(WIDE_FROM_DP, 80f), build(c, rows, false));
-        RemoteViews views = new RemoteViews(sizes);
         for (int id : ids) {
-            manager.updateAppWidget(id, views);
+            Bitmap glass = glassFor(c, manager, id);
+            Map<SizeF, RemoteViews> sizes = new ArrayMap<>();
+            sizes.put(new SizeF(100f, 80f), build(c, id, rows, true, glass));
+            sizes.put(new SizeF(WIDE_FROM_DP, 80f), build(c, id, rows, false, glass));
+            manager.updateAppWidget(id, new RemoteViews(sizes));
         }
     }
 
-    private static RemoteViews build(Context c, List<AgendaData.Row> rows, boolean narrow) {
+    /** Sfondo vetro per questo widget, se lo stile è attivo e la posizione è nota. */
+    private static Bitmap glassFor(Context c, AppWidgetManager manager, int id) {
+        if (Store.getStyle(c) != Store.STYLE_GLASS || !Glass.hasWallpaper(c)) return null;
+        int[] p = Store.getPlacement(c, id);
+        if (p == null) return null;
+        int[] size = sizePx(c, manager, id, p[2], p[3]);
+        return Glass.render(c, p[0], p[1], size[0], size[1], p[2], p[3],
+                Store.getBgColor(c), Store.getBgOpacity(c));
+    }
+
+    /** Dimensione del widget in pixel: in verticale vale larghezza minima × altezza massima. */
+    static int[] sizePx(Context c, AppWidgetManager manager, int id, int screenW, int screenH) {
+        Bundle o = manager.getAppWidgetOptions(id);
+        boolean portrait = screenH >= screenW;
+        int wDp = o.getInt(portrait ? AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH
+                : AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH);
+        int hDp = o.getInt(portrait ? AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
+                : AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
+        float d = c.getResources().getDisplayMetrics().density;
+        return new int[]{Math.round(wDp * d), Math.round(hDp * d)};
+    }
+
+    private static RemoteViews build(Context c, int widgetId, List<AgendaData.Row> rows,
+                                     boolean narrow, Bitmap glass) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda);
 
-        // Sfondo: colore e opacità scelti nell'app
-        int alpha = Math.round(Store.getBgOpacity(c) * 2.55f);
-        v.setInt(R.id.bg_fill, "setColorFilter", Store.getBgColor(c));
-        v.setInt(R.id.bg_fill, "setImageAlpha", alpha);
-        v.setInt(R.id.bg_shade, "setImageAlpha", alpha);
+        // Sfondo: pieno (colore + opacità) oppure vetro come le cartelle
+        if (glass != null) {
+            v.setImageViewBitmap(R.id.bg_fill, glass);
+            v.setInt(R.id.bg_fill, "setColorFilter", 0);
+            v.setInt(R.id.bg_fill, "setImageAlpha", 255);
+            v.setInt(R.id.bg_shade, "setImageAlpha", 0);
+        } else {
+            boolean glassStyle = Store.getStyle(c) == Store.STYLE_GLASS;
+            // In stile vetro, finché la posizione non è nota, una velatura leggera
+            int opacity = glassStyle ? 35 : Store.getBgOpacity(c);
+            int alpha = Math.round(opacity * 2.55f);
+            v.setInt(R.id.bg_fill, "setColorFilter", Store.getBgColor(c));
+            v.setInt(R.id.bg_fill, "setImageAlpha", alpha);
+            v.setInt(R.id.bg_shade, "setImageAlpha", glassStyle ? 0 : alpha);
+        }
 
         LocalDate today = LocalDate.now();
         Locale it = Locale.ITALIAN;
@@ -77,11 +111,12 @@ public class AgendaWidget extends AppWidgetProvider {
                 today.format(DateTimeFormatter.ofPattern(narrow ? "d MMM" : "d MMMM", it)));
 
         // Intestazione: apre il calendario sulla data di oggi
-        Uri.Builder time = CalendarContract.CONTENT_URI.buildUpon().appendPath("time");
-        ContentUris.appendId(time, System.currentTimeMillis());
-        Intent openCalendar = new Intent(Intent.ACTION_VIEW, time.build())
+        // Passa da ActionActivity, che intanto rileva dove si trova il widget sullo schermo
+        Intent openCalendar = new Intent(c, ActionActivity.class)
+                .putExtra(ActionActivity.EXTRA_ACTION, ActionActivity.ACTION_OPEN_CALENDAR)
+                .putExtra(ActionActivity.EXTRA_WIDGET, widgetId)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        v.setOnClickPendingIntent(R.id.header, PendingIntent.getActivity(c, 1, openCalendar,
+        v.setOnClickPendingIntent(R.id.header, PendingIntent.getActivity(c, 1000 + widgetId, openCalendar,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
 
         // Pulsante +: nuovo evento

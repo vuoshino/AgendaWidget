@@ -1,0 +1,144 @@
+package it.tiziano.agenda;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.ImageDecoder;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.net.Uri;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+/**
+ * Effetto vetro come le cartelle di One UI: lo sfondo della home viene sfocato una volta,
+ * poi per ogni widget si ritaglia il pezzo che sta esattamente dietro e lo si tinge.
+ */
+public final class Glass {
+
+    private static final String FILE = "wall_blur.png";
+    private static final int BASE_WIDTH = 360;
+    private static final int BLUR_RADIUS = 9;
+    /** Il bitmap del widget è a un terzo della risoluzione: è sfocato, non si nota. */
+    private static final int SCALE_DOWN = 3;
+
+    private static Bitmap cache;
+
+    private Glass() {
+    }
+
+    public static boolean hasWallpaper(Context c) {
+        return new File(c.getFilesDir(), FILE).exists();
+    }
+
+    /** Carica l'immagine scelta, la riduce, la sfoca e la salva. */
+    public static void importWallpaper(Context c, Uri uri) throws IOException {
+        Bitmap src = ImageDecoder.decodeBitmap(ImageDecoder.createSource(c.getContentResolver(), uri),
+                (decoder, info, source) -> {
+                    decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+                    int w = info.getSize().getWidth();
+                    if (w > BASE_WIDTH * 4) decoder.setTargetSampleSize(w / (BASE_WIDTH * 2));
+                });
+        int h = Math.max(1, Math.round(src.getHeight() * (BASE_WIDTH / (float) src.getWidth())));
+        Bitmap small = Bitmap.createScaledBitmap(src, BASE_WIDTH, h, true)
+                .copy(Bitmap.Config.ARGB_8888, true);
+        src.recycle();
+        blur(small, BLUR_RADIUS);
+        try (FileOutputStream out = new FileOutputStream(new File(c.getFilesDir(), FILE))) {
+            small.compress(Bitmap.CompressFormat.PNG, 100, out);
+        }
+        synchronized (Glass.class) {
+            cache = small;
+        }
+    }
+
+    public static void clear(Context c) {
+        new File(c.getFilesDir(), FILE).delete();
+        synchronized (Glass.class) {
+            cache = null;
+        }
+    }
+
+    private static synchronized Bitmap load(Context c) {
+        if (cache == null) {
+            File f = new File(c.getFilesDir(), FILE);
+            if (f.exists()) cache = BitmapFactory.decodeFile(f.getAbsolutePath());
+        }
+        return cache;
+    }
+
+    /**
+     * Ritaglio per un rettangolo dello schermo (in pixel), con lo sfondo adattato allo schermo
+     * come fa il sistema (riempie e centra).
+     */
+    public static Bitmap render(Context c, int left, int top, int width, int height,
+                                int screenW, int screenH, int tint, int strength) {
+        Bitmap blur = load(c);
+        if (blur == null || width <= 0 || height <= 0 || screenW <= 0 || screenH <= 0) return null;
+
+        float s = Math.max(screenW / (float) blur.getWidth(), screenH / (float) blur.getHeight());
+        float ox = (screenW - blur.getWidth() * s) / 2f;
+        float oy = (screenH - blur.getHeight() * s) / 2f;
+        Rect src = new Rect(
+                Math.round((left - ox) / s), Math.round((top - oy) / s),
+                Math.round((left + width - ox) / s), Math.round((top + height - oy) / s));
+        src.intersect(0, 0, blur.getWidth(), blur.getHeight());
+        if (src.isEmpty()) return null;
+
+        int outW = Math.max(1, width / SCALE_DOWN);
+        int outH = Math.max(1, height / SCALE_DOWN);
+        Bitmap out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(out);
+        cv.drawBitmap(blur, src, new Rect(0, 0, outW, outH), new Paint(Paint.FILTER_BITMAP_FLAG));
+        int a = Math.round(Math.max(0, Math.min(100, strength)) * 2.55f);
+        cv.drawColor((tint & 0x00FFFFFF) | (a << 24));
+        return out;
+    }
+
+    /** Sfocatura a scatole ripetuta tre volte: molto vicina a una gaussiana. */
+    private static void blur(Bitmap b, int r) {
+        int w = b.getWidth(), h = b.getHeight();
+        int[] px = new int[w * h];
+        int[] tmp = new int[w * h];
+        b.getPixels(px, 0, w, 0, 0, w, h);
+        for (int i = 0; i < 3; i++) {
+            pass(px, tmp, w, h, r, true);
+            pass(tmp, px, w, h, r, false);
+        }
+        b.setPixels(px, 0, w, 0, 0, w, h);
+    }
+
+    private static void pass(int[] in, int[] out, int w, int h, int r, boolean horizontal) {
+        int lines = horizontal ? h : w;
+        int len = horizontal ? w : h;
+        int div = r * 2 + 1;
+        for (int line = 0; line < lines; line++) {
+            int sr = 0, sg = 0, sb = 0;
+            for (int k = -r; k <= r; k++) {
+                int p = in[idx(line, clamp(k, len), w, horizontal)];
+                sr += (p >> 16) & 0xFF;
+                sg += (p >> 8) & 0xFF;
+                sb += p & 0xFF;
+            }
+            for (int i = 0; i < len; i++) {
+                out[idx(line, i, w, horizontal)] = 0xFF000000 | ((sr / div) << 16) | ((sg / div) << 8) | (sb / div);
+                int pOut = in[idx(line, clamp(i - r, len), w, horizontal)];
+                int pIn = in[idx(line, clamp(i + r + 1, len), w, horizontal)];
+                sr += ((pIn >> 16) & 0xFF) - ((pOut >> 16) & 0xFF);
+                sg += ((pIn >> 8) & 0xFF) - ((pOut >> 8) & 0xFF);
+                sb += (pIn & 0xFF) - (pOut & 0xFF);
+            }
+        }
+    }
+
+    private static int idx(int line, int i, int w, boolean horizontal) {
+        return horizontal ? line * w + i : i * w + line;
+    }
+
+    private static int clamp(int i, int len) {
+        return i < 0 ? 0 : (i >= len ? len - 1 : i);
+    }
+}

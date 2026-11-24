@@ -114,24 +114,69 @@ public final class Store {
 
     // Aspetto del widget
 
-    /** Colori proposti: il primo riprende il widget Meteo di Samsung di sera. */
-    public static final int[] COLORS = {0xFF1A2857, 0xFF2E2A6E, 0xFF4B3A8F, 0xFF22242C, 0xFF000000, 0xFFB0A0FF};
-    public static final String[] COLOR_NAMES = {"Blu notte (come Meteo)", "Indaco", "Viola", "Grafite", "Nero", "Lavanda"};
+    public static final int STYLE_SOLID = 0;
+    public static final int STYLE_GLASS = 1;
+
+    /** Il secondo colore, al 30% in stile vetro, è quello misurato sulle cartelle di One UI. */
+    public static final int[] COLORS = {0xFF1A2857, 0xFFBEA0FF, 0xFF2E2A6E, 0xFF4B3A8F, 0xFF22242C, 0xFF000000};
+    public static final String[] COLOR_NAMES = {"Blu notte (come Meteo)", "Lilla (come le cartelle)",
+            "Indaco", "Viola", "Grafite", "Nero"};
+
+    public static int getStyle(Context c) {
+        return prefs(c).getInt("style", STYLE_SOLID);
+    }
+
+    public static void setStyle(Context c, int style) {
+        prefs(c).edit().putInt("style", style).apply();
+    }
+
+    private static String k(Context c, String key) {
+        return getStyle(c) == STYLE_GLASS ? "glass_" + key : key;
+    }
 
     public static int getBgColor(Context c) {
-        return prefs(c).getInt("bg_color", COLORS[0]);
+        return prefs(c).getInt(k(c, "bg_color"), getStyle(c) == STYLE_GLASS ? COLORS[1] : COLORS[0]);
     }
 
     public static void setBgColor(Context c, int color) {
-        prefs(c).edit().putInt("bg_color", color).apply();
+        prefs(c).edit().putInt(k(c, "bg_color"), color).apply();
     }
 
-    /** Opacità da 0 a 100. */
+    /** Opacità (pieno) o intensità del colore (vetro), da 0 a 100. */
     public static int getBgOpacity(Context c) {
-        return prefs(c).getInt("bg_opacity", 100);
+        return prefs(c).getInt(k(c, "bg_opacity"), getStyle(c) == STYLE_GLASS ? 30 : 100);
     }
 
     public static void setBgOpacity(Context c, int opacity) {
-        prefs(c).edit().putInt("bg_opacity", Math.max(0, Math.min(100, opacity))).apply();
+        prefs(c).edit().putInt(k(c, "bg_opacity"), Math.max(0, Math.min(100, opacity))).apply();
+    }
+
+    /** Posizione sullo schermo di un widget, rilevata toccando la data: {sinistra, alto, largSchermo, altSchermo}. */
+    public static int[] getPlacement(Context c, int widgetId) {
+        String raw = prefs(c).getString("place_" + widgetId, null);
+        if (raw == null) return null;
+        String[] p = raw.split(",");
+        if (p.length != 4) return null;
+        try {
+            return new int[]{Integer.parseInt(p[0]), Integer.parseInt(p[1]),
+                    Integer.parseInt(p[2]), Integer.parseInt(p[3])};
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** @return true se la posizione è cambiata. */
+    public static boolean setPlacement(Context c, int widgetId, int left, int top, int screenW, int screenH) {
+        String raw = left + "," + top + "," + screenW + "," + screenH;
+        if (raw.equals(prefs(c).getString("place_" + widgetId, null))) return false;
+        prefs(c).edit().putString("place_" + widgetId, raw).apply();
+        return true;
+    }
+
+    public static boolean anyPlacement(Context c) {
+        for (String key : prefs(c).getAll().keySet()) {
+            if (key.startsWith("place_")) return true;
+        }
+        return false;
     }
 }

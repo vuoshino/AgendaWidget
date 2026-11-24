@@ -17,4 +17,8 @@
     <string name="hint">Aggiungi il widget dalla home: tieni premuto su uno spazio vuoto, poi Widget e Agenda. Puoi allargarlo o stringerlo trascinando i bordi.</string>
     <string name="look_title">Aspetto del widget</string>
     <string name="look_preview">Anteprima</string>
+    <string name="style_solid">Pieno</string>
+    <string name="style_glass">Vetro</string>
+    <string name="glass_pick">Scegli lo sfondo della home</string>
+    <string name="glass_change">Cambia immagine</string>
 </resources>

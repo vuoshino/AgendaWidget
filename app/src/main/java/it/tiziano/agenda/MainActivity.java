@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
 
     private static final int REQ_CALENDAR = 1;
     private static final int REQ_AUTH = 2;
+    private static final int REQ_WALLPAPER = 3;
 
     private TextView calendarStatus;
     private TextView calendarButton;
@@ -100,6 +101,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_WALLPAPER) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) importWallpaper(data.getData());
+            return;
+        }
         if (requestCode != REQ_AUTH) return;
         if (resultCode != RESULT_OK) {
             lastError = "Collegamento annullato.";
@@ -197,6 +202,19 @@ public class MainActivity extends Activity {
             row.addView(dot);
         }
 
+        findViewById(R.id.style_solid).setOnClickListener(v -> setStyle(Store.STYLE_SOLID));
+        findViewById(R.id.style_glass).setOnClickListener(v -> setStyle(Store.STYLE_GLASS));
+        findViewById(R.id.glass_pick).setOnClickListener(v -> {
+            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                    .addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("image/*");
+            try {
+                startActivityForResult(pick, REQ_WALLPAPER);
+            } catch (android.content.ActivityNotFoundException e) {
+                Toast.makeText(this, "Nessuna app per scegliere immagini", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         SeekBar bar = findViewById(R.id.opacity);
         bar.setProgress(Store.getBgOpacity(this));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -219,7 +237,51 @@ public class MainActivity extends Activity {
         updateLook();
     }
 
+    private void setStyle(int style) {
+        Store.setStyle(this, style);
+        ((SeekBar) findViewById(R.id.opacity)).setProgress(Store.getBgOpacity(this));
+        updateLook();
+        AgendaWidget.renderAll(this);
+    }
+
+    private void importWallpaper(android.net.Uri uri) {
+        TextView status = findViewById(R.id.glass_status);
+        status.setText("Preparo lo sfondo…");
+        new Thread(() -> {
+            String error = null;
+            try {
+                Glass.importWallpaper(this, uri);
+            } catch (Exception e) {
+                error = e.getMessage() != null ? e.getMessage() : e.toString();
+            }
+            final String err = error;
+            runOnUiThread(() -> {
+                if (err != null) Toast.makeText(this, "Immagine non valida: " + err, Toast.LENGTH_LONG).show();
+                updateLook();
+                AgendaWidget.renderAll(this);
+            });
+        }).start();
+    }
+
     private void updateLook() {
+        boolean glass = Store.getStyle(this) == Store.STYLE_GLASS;
+        findViewById(R.id.style_solid).setBackgroundResource(glass ? R.drawable.bg_button_ghost : R.drawable.bg_button);
+        findViewById(R.id.style_glass).setBackgroundResource(glass ? R.drawable.bg_button : R.drawable.bg_button_ghost);
+        findViewById(R.id.glass_box).setVisibility(glass ? View.VISIBLE : View.GONE);
+        boolean hasWall = Glass.hasWallpaper(this);
+        ((TextView) findViewById(R.id.glass_pick)).setText(hasWall ? R.string.glass_change : R.string.glass_pick);
+        String gs;
+        if (!hasWall) {
+            gs = "Scegli dalla galleria la stessa immagine che usi come sfondo della home: "
+                    + "verrà sfocata e colorata come le cartelle di One UI.";
+        } else if (!Store.anyPlacement(this)) {
+            gs = "Sfondo pronto. Ora tocca una volta la data in alto sul widget: "
+                    + "così l'app capisce dove si trova e allinea lo sfondo.";
+        } else {
+            gs = "Sfondo allineato. Se sposti il widget, tocca di nuovo la sua data.";
+        }
+        ((TextView) findViewById(R.id.glass_status)).setText(gs);
+
         int selected = Store.getBgColor(this);
         int opacity = Store.getBgOpacity(this);
         float d = getResources().getDisplayMetrics().density;
@@ -243,8 +305,26 @@ public class MainActivity extends Activity {
         }
 
         ImageView fill = findViewById(R.id.preview_fill);
-        fill.setColorFilter(selected);
-        fill.setImageAlpha(Math.round(opacity * 2.55f));
-        ((TextView) findViewById(R.id.opacity_label)).setText("Opacità " + opacity + "%");
+        View preview = findViewById(R.id.preview);
+        preview.setClipToOutline(true);
+        android.graphics.Bitmap glassPreview = null;
+        if (glass && hasWall) {
+            android.graphics.Rect screen = getWindowManager().getMaximumWindowMetrics().getBounds();
+            int pw = Math.max(1, preview.getWidth() > 0 ? preview.getWidth() : screen.width() - Math.round(80 * d));
+            int ph = Math.round(64 * d);
+            glassPreview = Glass.render(this, (screen.width() - pw) / 2, screen.height() / 2,
+                    pw, ph, screen.width(), screen.height(), selected, opacity);
+        }
+        if (glassPreview != null) {
+            fill.setImageBitmap(glassPreview);
+            fill.clearColorFilter();
+            fill.setImageAlpha(255);
+        } else {
+            fill.setImageResource(R.drawable.bg_preview);
+            fill.setColorFilter(selected);
+            fill.setImageAlpha(Math.round((glass ? 35 : opacity) * 2.55f));
+        }
+        ((TextView) findViewById(R.id.opacity_label)).setText(
+                (glass ? "Intensità del colore " : "Opacità ") + opacity + "%");
     }
 }
