@@ -65,13 +65,11 @@ public final class AgendaData {
         TreeMap<LocalDate, DayGroup> days = new TreeMap<>();
         List<Row> overdue = new ArrayList<>();
         List<Row> undated = new ArrayList<>();
-        int taskCount = 0;
 
         // Promemoria dalla cache
         boolean tasksOn = Store.isConnected(c);
         if (tasksOn) {
             for (Store.TaskItem t : Store.getTasks(c)) {
-                taskCount++;
                 Row r = new Row();
                 r.type = TYPE_TASK;
                 r.title = t.title;
@@ -160,15 +158,14 @@ public final class AgendaData {
 
         // Composizione finale
         List<Row> rows = new ArrayList<>();
-        if (tasksOn && taskCount > 0) {
+        // In ritardo: una pillola come nel widget Google, che si apre e si chiude toccandola
+        if (!overdue.isEmpty()) {
+            boolean open = Store.isOverdueOpen(c);
             Row s = new Row();
             s.type = TYPE_SUMMARY;
-            s.title = taskCount == 1 ? "1 promemoria" : taskCount + " promemoria";
+            s.title = overdue.size() + " in ritardo " + (open ? "\u25B4" : "\u25BE");
             rows.add(s);
-        }
-        if (!overdue.isEmpty()) {
-            rows.add(day("In ritardo"));
-            rows.addAll(overdue);
+            if (open) rows.addAll(overdue);
         }
         for (Map.Entry<LocalDate, DayGroup> e : days.entrySet()) {
             DayGroup g = e.getValue();
@@ -182,8 +179,6 @@ public final class AgendaData {
             rows.add(day("Da fare"));
             for (int i = 0; i < undated.size() && i < MAX_UNDATED; i++) rows.add(undated.get(i));
         }
-        // Se c'è solo il riepilogo, non serve mostrarlo da solo
-        if (rows.size() == 1 && rows.get(0).type == TYPE_SUMMARY) rows.clear();
         return rows.size() > MAX_ROWS ? rows.subList(0, MAX_ROWS) : rows;
     }
 

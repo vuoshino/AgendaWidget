@@ -179,4 +179,12 @@ public final class Store {
         }
         return false;
     }
+
+    public static boolean isOverdueOpen(Context c) {
+        return prefs(c).getBoolean("overdue_open", false);
+    }
+
+    public static void toggleOverdue(Context c) {
+        prefs(c).edit().putBoolean("overdue_open", !isOverdueOpen(c)).apply();
+    }
 }

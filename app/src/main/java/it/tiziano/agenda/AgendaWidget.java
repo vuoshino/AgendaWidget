@@ -152,7 +152,7 @@ public class AgendaWidget extends AppWidgetProvider {
                 RemoteViews v = new RemoteViews(pkg, R.layout.item_summary);
                 v.setTextViewText(R.id.text, r.title);
                 v.setOnClickFillInIntent(R.id.row, new Intent()
-                        .putExtra(ActionActivity.EXTRA_ACTION, ActionActivity.ACTION_OPEN_TASKS));
+                        .putExtra(ActionActivity.EXTRA_ACTION, ActionActivity.ACTION_TOGGLE_OVERDUE));
                 return v;
             }
             case AgendaData.TYPE_TASK: {

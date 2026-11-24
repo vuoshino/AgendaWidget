@@ -21,6 +21,7 @@ public class ActionActivity extends Activity {
     public static final String ACTION_OPEN_TASKS = "open_tasks";
     public static final String ACTION_COMPLETE = "complete";
     public static final String ACTION_OPEN_CALENDAR = "open_calendar";
+    public static final String ACTION_TOGGLE_OVERDUE = "toggle_overdue";
     public static final String EXTRA_WIDGET = "widget";
 
     @Override
@@ -29,7 +30,10 @@ public class ActionActivity extends Activity {
         Intent in = getIntent();
         String action = in != null ? in.getStringExtra(EXTRA_ACTION) : null;
 
-        if (ACTION_OPEN_CALENDAR.equals(action)) {
+        if (ACTION_TOGGLE_OVERDUE.equals(action)) {
+            Store.toggleOverdue(this);
+            AgendaWidget.renderAll(this);
+        } else if (ACTION_OPEN_CALENDAR.equals(action)) {
             locate(in);
             android.net.Uri.Builder time = CalendarContract.CONTENT_URI.buildUpon().appendPath("time");
             ContentUris.appendId(time, System.currentTimeMillis());
