@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Riflesso di luce dall'alto, come i widget di One UI 9.5 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:centerColor="#07FFFFFF"
+        android:centerY="0.35"
+        android:endColor="#00FFFFFF"
+        android:startColor="#1FFFFFFF" />
+    <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+</shape>

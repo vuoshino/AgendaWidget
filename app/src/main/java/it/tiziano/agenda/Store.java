@@ -222,4 +222,13 @@ public final class Store {
     public static void setGlassTransparency(Context c, int t) {
         prefs(c).edit().putInt("glass_transparency", Math.max(0, Math.min(100, t))).apply();
     }
+
+    /** Stile One UI 9.5: colori vivaci, riflesso in alto e bordo luminoso. */
+    public static boolean isVivid(Context c) {
+        return prefs(c).getBoolean("glass_vivid", false);
+    }
+
+    public static void setVivid(Context c, boolean on) {
+        prefs(c).edit().putBoolean("glass_vivid", on).apply();
+    }
 }

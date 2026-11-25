@@ -226,7 +226,8 @@ public class MainActivity extends Activity {
             updateLook();
         });
 
-        findViewById(R.id.glass_preset).setOnClickListener(v -> applyFolderPreset());
+        findViewById(R.id.glass_preset).setOnClickListener(v -> applyPreset(false));
+        findViewById(R.id.glass_preset95).setOnClickListener(v -> applyPreset(true));
 
         SeekBar transp = findViewById(R.id.transp);
         transp.setProgress(Store.getGlassTransparency(this));
@@ -380,14 +381,18 @@ public class MainActivity extends Activity {
         return best;
     }
 
-    /** Valori misurati sulle cartelle di One UI: lilla al 30%, sfocatura 65%, nessuna trasparenza. */
-    private void applyFolderPreset() {
+    /**
+     * Cartelle: lilla al 30%, sfocatura 65%.
+     * One UI 9.5: nessuna tinta, sfocatura fortissima, colori vivaci, riflesso e bordo luminoso.
+     */
+    private void applyPreset(boolean oneUi95) {
+        Store.setVivid(this, oneUi95);
         Store.setBgColor(this, Store.COLORS[1]);
-        Store.setBgOpacity(this, 30);
-        Store.setBlur(this, 65);
+        Store.setBgOpacity(this, oneUi95 ? 0 : 30);
+        Store.setBlur(this, oneUi95 ? 90 : 65);
         Store.setGlassTransparency(this, 0);
-        ((SeekBar) findViewById(R.id.opacity)).setProgress(30);
-        ((SeekBar) findViewById(R.id.blur)).setProgress(65);
+        ((SeekBar) findViewById(R.id.opacity)).setProgress(Store.getBgOpacity(this));
+        ((SeekBar) findViewById(R.id.blur)).setProgress(Store.getBlur(this));
         ((SeekBar) findViewById(R.id.transp)).setProgress(0);
         updateLook();
         new Thread(() -> {
@@ -399,7 +404,8 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 updateLook();
                 AgendaWidget.renderAll(this);
-                Toast.makeText(this, "Impostato come le cartelle", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, oneUi95 ? "Stile One UI 9.5" : "Stile come le cartelle",
+                        Toast.LENGTH_SHORT).show();
             });
         }).start();
     }
@@ -456,6 +462,8 @@ public class MainActivity extends Activity {
         align.setVisibility(hasWall ? View.VISIBLE : View.GONE);
         findViewById(R.id.glass_cancel).setVisibility(cal ? View.VISIBLE : View.GONE);
         findViewById(R.id.glass_pick).setBackgroundResource(hasWall ? R.drawable.bg_button_ghost : R.drawable.bg_button);
+        boolean vivid = Store.isVivid(this);
+        findViewById(R.id.glass_preset95).setBackgroundResource(vivid ? R.drawable.bg_button : R.drawable.bg_button_ghost);
         ((TextView) findViewById(R.id.glass_status)).setText(gs);
         ((TextView) findViewById(R.id.blur_label)).setText("Sfocatura " + Store.getBlur(this) + "%");
         findViewById(R.id.blur_label).setVisibility(hasWall ? View.VISIBLE : View.GONE);
@@ -496,7 +504,7 @@ public class MainActivity extends Activity {
             int pw = Math.max(1, preview.getWidth() > 0 ? preview.getWidth() : screen.width() - Math.round(80 * d));
             int ph = Math.round(64 * d);
             glassPreview = Glass.render(this, (screen.width() - pw) / 2, screen.height() / 2,
-                    pw, ph, screen.width(), screen.height(), selected, opacity);
+                    pw, ph, screen.width(), screen.height(), selected, opacity, Store.isVivid(this));
         }
         if (glassPreview != null) {
             fill.setImageBitmap(glassPreview);

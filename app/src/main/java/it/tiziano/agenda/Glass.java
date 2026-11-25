@@ -99,6 +99,12 @@ public final class Glass {
      */
     public static Bitmap render(Context c, int left, int top, int width, int height,
                                 int screenW, int screenH, int tint, int strength) {
+        return render(c, left, top, width, height, screenW, screenH, tint, strength, false);
+    }
+
+    /** @param vivid colori più saturi e luminosi, come i widget di One UI 9.5 */
+    public static Bitmap render(Context c, int left, int top, int width, int height,
+                                int screenW, int screenH, int tint, int strength, boolean vivid) {
         Bitmap blur = load(c);
         if (blur == null || width <= 0 || height <= 0 || screenW <= 0 || screenH <= 0) return null;
 
@@ -115,7 +121,16 @@ public final class Glass {
         int outH = Math.max(1, height / SCALE_DOWN);
         Bitmap out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888);
         Canvas cv = new Canvas(out);
-        cv.drawBitmap(blur, src, new Rect(0, 0, outW, outH), new Paint(Paint.FILTER_BITMAP_FLAG));
+        Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
+        if (vivid) {
+            android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix();
+            cm.setSaturation(1.45f);
+            android.graphics.ColorMatrix light = new android.graphics.ColorMatrix();
+            light.setScale(1.12f, 1.12f, 1.12f, 1f);
+            cm.postConcat(light);
+            paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
+        }
+        cv.drawBitmap(blur, src, new Rect(0, 0, outW, outH), paint);
         int a = Math.round(Math.max(0, Math.min(100, strength)) * 2.55f);
         cv.drawColor((tint & 0x00FFFFFF) | (a << 24));
         return out;

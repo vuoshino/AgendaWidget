@@ -68,7 +68,7 @@ public class AgendaWidget extends AppWidgetProvider {
         if (p == null) return null;
         int[] size = p.length == 6 ? new int[]{p[4], p[5]} : sizePx(c, manager, id, p[2], p[3]);
         return Glass.render(c, p[0], p[1], size[0], size[1], p[2], p[3],
-                Store.getBgColor(c), Store.getBgOpacity(c));
+                Store.getBgColor(c), Store.getBgOpacity(c), Store.isVivid(c));
     }
 
     /** Dimensione del widget in pixel: in verticale vale larghezza minima × altezza massima. */
@@ -101,7 +101,12 @@ public class AgendaWidget extends AppWidgetProvider {
             v.setInt(R.id.bg_fill, "setImageAlpha",
                     Math.round((100 - Store.getGlassTransparency(c)) * 2.55f));
             v.setInt(R.id.bg_shade, "setImageAlpha", 0);
+            int extra = Store.isVivid(c) ? View.VISIBLE : View.GONE;
+            v.setViewVisibility(R.id.bg_glow, extra);
+            v.setViewVisibility(R.id.bg_rim, extra);
         } else {
+            v.setViewVisibility(R.id.bg_glow, View.GONE);
+            v.setViewVisibility(R.id.bg_rim, View.GONE);
             boolean glassStyle = Store.getStyle(c) == Store.STYLE_GLASS;
             // In stile vetro, finché la posizione non è nota, una velatura leggera
             int opacity = glassStyle ? 35 : Store.getBgOpacity(c);
