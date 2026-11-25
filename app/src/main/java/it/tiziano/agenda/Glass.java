@@ -136,6 +136,97 @@ public final class Glass {
         return out;
     }
 
+    // Sfondo preso dallo screenshot: esattamente ciò che sta dietro al widget
+
+    private static final int SHOT_SCALE = 4;
+    private static final int SHOT_MAX_RADIUS = 15;
+    private static final java.util.Map<String, Bitmap> shotCache = new java.util.HashMap<>();
+
+    private static File shotFile(Context c, int id) {
+        return new File(c.getFilesDir(), "shot_" + id + ".png");
+    }
+
+    public static boolean hasShot(Context c, int id) {
+        return shotFile(c, id).exists();
+    }
+
+    public static int firstShot(Context c) {
+        File[] files = c.getFilesDir().listFiles();
+        if (files == null) return -1;
+        for (File f : files) {
+            String n = f.getName();
+            if (n.startsWith("shot_") && n.endsWith(".png")) {
+                try {
+                    return Integer.parseInt(n.substring(5, n.length() - 4));
+                } catch (NumberFormatException ignored) {
+                    // file estraneo
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static void saveShot(Context c, int id, Bitmap crop) throws IOException {
+        int w = Math.max(16, crop.getWidth() / SHOT_SCALE);
+        int h = Math.max(16, crop.getHeight() / SHOT_SCALE);
+        Bitmap small = Bitmap.createScaledBitmap(crop, w, h, true);
+        save(c, "shot_" + id + ".png", small);
+        synchronized (Glass.class) {
+            shotCache.clear();
+        }
+    }
+
+    /** Sfondo del widget: ritaglio sfocato, poi colori vivaci e tinta se richiesti. */
+    public static Bitmap renderShot(Context c, int id, int tint, int strength, boolean vivid, int blurPct) {
+        String key = id + ":" + blurPct;
+        Bitmap blurred;
+        synchronized (Glass.class) {
+            blurred = shotCache.get(key);
+        }
+        if (blurred == null) {
+            File f = shotFile(c, id);
+            if (!f.exists()) return null;
+            Bitmap b = BitmapFactory.decodeFile(f.getAbsolutePath());
+            if (b == null) return null;
+            blurred = b.copy(Bitmap.Config.ARGB_8888, true);
+            int radius = Math.round(blurPct * SHOT_MAX_RADIUS / 100f);
+            if (radius > 0) blur(blurred, radius);
+            synchronized (Glass.class) {
+                shotCache.put(key, blurred);
+            }
+        }
+        Bitmap out = Bitmap.createBitmap(blurred.getWidth(), blurred.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(out);
+        cv.drawBitmap(blurred, 0, 0, vividPaint(vivid));
+        int a = Math.round(Math.max(0, Math.min(100, strength)) * 2.55f);
+        cv.drawColor((tint & 0x00FFFFFF) | (a << 24));
+        return out;
+    }
+
+    /** Anteprima per l'app: una fascia centrale dello sfondo del primo widget. */
+    public static Bitmap previewShot(Context c, int pw, int ph, int tint, int strength, boolean vivid, int blurPct) {
+        int id = firstShot(c);
+        if (id < 0) return null;
+        Bitmap full = renderShot(c, id, tint, strength, vivid, blurPct);
+        if (full == null) return null;
+        int w = full.getWidth();
+        int h = Math.max(1, Math.min(full.getHeight(), Math.round(w * ph / (float) Math.max(1, pw))));
+        return Bitmap.createBitmap(full, 0, (full.getHeight() - h) / 2, w, h);
+    }
+
+    private static Paint vividPaint(boolean vivid) {
+        Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
+        if (vivid) {
+            android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix();
+            cm.setSaturation(1.45f);
+            android.graphics.ColorMatrix light = new android.graphics.ColorMatrix();
+            light.setScale(1.12f, 1.12f, 1.12f, 1f);
+            cm.postConcat(light);
+            paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
+        }
+        return paint;
+    }
+
     /** Sfocatura a scatole ripetuta tre volte: molto vicina a una gaussiana. */
     private static void blur(Bitmap b, int r) {
         int w = b.getWidth(), h = b.getHeight();

@@ -63,7 +63,12 @@ public class AgendaWidget extends AppWidgetProvider {
 
     /** Sfondo vetro per questo widget, se lo stile è attivo e la posizione è nota. */
     private static Bitmap glassFor(Context c, AppWidgetManager manager, int id) {
-        if (Store.getStyle(c) != Store.STYLE_GLASS || !Glass.hasWallpaper(c)) return null;
+        if (Store.getStyle(c) != Store.STYLE_GLASS) return null;
+        if (Glass.hasShot(c, id)) {
+            return Glass.renderShot(c, id, Store.getBgColor(c), Store.getBgOpacity(c),
+                    Store.isVivid(c), Store.getBlur(c));
+        }
+        if (!Glass.hasWallpaper(c)) return null;
         int[] p = Store.getPlacement(c, id);
         if (p == null) return null;
         int[] size = p.length == 6 ? new int[]{p[4], p[5]} : sizePx(c, manager, id, p[2], p[3]);
@@ -87,8 +92,9 @@ public class AgendaWidget extends AppWidgetProvider {
                                      boolean narrow, Bitmap glass) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda);
 
-        // Segni per l'allineamento tramite screenshot
-        int marks = Store.isCalibrating(c) ? View.VISIBLE : View.GONE;
+        // Durante la calibrazione il widget è vuoto: solo i segni, così lo screenshot mostra lo sfondo
+        boolean calibrating = Store.isCalibrating(c);
+        int marks = calibrating ? View.VISIBLE : View.GONE;
         v.setViewVisibility(R.id.mark_top, marks);
         v.setViewVisibility(R.id.mark_bottom, marks);
         v.setViewVisibility(R.id.mark_left, marks);
@@ -156,6 +162,14 @@ public class AgendaWidget extends AppWidgetProvider {
         boolean empty = rows.isEmpty();
         v.setViewVisibility(R.id.list, empty ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.empty, empty ? View.VISIBLE : View.GONE);
+
+        v.setViewVisibility(R.id.content, calibrating ? View.INVISIBLE : View.VISIBLE);
+        if (calibrating) {
+            v.setInt(R.id.bg_fill, "setImageAlpha", 0);
+            v.setInt(R.id.bg_shade, "setImageAlpha", 0);
+            v.setViewVisibility(R.id.bg_glow, View.GONE);
+            v.setViewVisibility(R.id.bg_rim, View.GONE);
+        }
         return v;
     }
 

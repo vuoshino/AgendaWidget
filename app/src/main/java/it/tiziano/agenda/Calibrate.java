@@ -24,11 +24,14 @@ public final class Calibrate {
         public final Rect widget;
         public final int screenW;
         public final int screenH;
+        /** Sfondo dietro al widget (senza i segni ai bordi). */
+        public final Bitmap backdrop;
 
-        Result(Rect widget, int screenW, int screenH) {
+        Result(Rect widget, int screenW, int screenH, Bitmap backdrop) {
             this.widget = widget;
             this.screenW = screenW;
             this.screenH = screenH;
+            this.backdrop = backdrop;
         }
     }
 
@@ -39,7 +42,6 @@ public final class Calibrate {
         int w = b.getWidth(), h = b.getHeight();
         int[] px = new int[w * h];
         b.getPixels(px, 0, w, 0, 0, w, h);
-        b.recycle();
 
         boolean[] mask = new boolean[w * h];
         for (int i = 0; i < px.length; i++) {
@@ -89,10 +91,23 @@ public final class Calibrate {
             }
         }
         if (top == null || bottom == null || left == null || right == null || top == bottom || left == right) {
+            b.recycle();
             return null;
         }
         Rect widget = new Rect(left.left, top.top, right.right, bottom.bottom);
-        if (widget.width() < 50 || widget.height() < 50) return null;
-        return new Result(widget, w, h);
+        if (widget.width() < 50 || widget.height() < 50) {
+            b.recycle();
+            return null;
+        }
+        // Ritaglio interno, oltre lo spessore dei segni
+        int inset = Math.max(Math.max(top.height(), bottom.height()), Math.max(left.width(), right.width())) + 4;
+        Rect inner = new Rect(widget);
+        inner.inset(inset, inset);
+        Bitmap backdrop = null;
+        if (inner.width() > 10 && inner.height() > 10) {
+            backdrop = Bitmap.createBitmap(b, inner.left, inner.top, inner.width(), inner.height());
+        }
+        b.recycle();
+        return new Result(widget, w, h, backdrop);
     }
 }

@@ -265,6 +265,11 @@ public class MainActivity extends Activity {
 
             @Override
             public void onStopTrackingTouch(SeekBar s) {
+                if (Glass.firstShot(MainActivity.this) >= 0) {
+                    updateLook();
+                    AgendaWidget.renderAll(MainActivity.this);
+                    return;
+                }
                 if (!Glass.canAdjust(MainActivity.this)) {
                     if (Glass.hasWallpaper(MainActivity.this)) {
                         Toast.makeText(MainActivity.this,
@@ -342,6 +347,13 @@ public class MainActivity extends Activity {
                     int id = pickWidget(res.widget.width(), res.widget.height());
                     if (id >= 0) {
                         Store.setPlacement(this, id, res.widget, res.screenW, res.screenH);
+                        if (res.backdrop != null) {
+                            try {
+                                Glass.saveShot(this, id, res.backdrop);
+                            } catch (Exception ignored) {
+                                // resta lo sfondo precedente
+                            }
+                        }
                         Store.setCalibrating(this, false);
                         Toast.makeText(this, "Widget allineato", Toast.LENGTH_SHORT).show();
                     } else {
@@ -441,25 +453,24 @@ public class MainActivity extends Activity {
         findViewById(R.id.style_solid).setBackgroundResource(glass ? R.drawable.bg_button_ghost : R.drawable.bg_button);
         findViewById(R.id.style_glass).setBackgroundResource(glass ? R.drawable.bg_button : R.drawable.bg_button_ghost);
         findViewById(R.id.glass_box).setVisibility(glass ? View.VISIBLE : View.GONE);
-        boolean hasWall = Glass.hasWallpaper(this);
+        boolean hasShot = Glass.firstShot(this) >= 0;
+        boolean hasWall = Glass.hasWallpaper(this) || hasShot;
         ((TextView) findViewById(R.id.glass_pick)).setText(hasWall ? R.string.glass_change : R.string.glass_pick);
         String gs;
-        if (!hasWall) {
-            gs = "Scegli dalla galleria la stessa immagine che usi come sfondo della home: "
-                    + "verrà sfocata e colorata come le cartelle di One UI.";
-        } else if (Store.isCalibrating(this)) {
-            gs = "Sui bordi del widget sono comparsi quattro segni viola. Vai alla home, fai uno screenshot "
+        if (Store.isCalibrating(this)) {
+            gs = "Il widget ora è vuoto, con quattro segni viola sui bordi. Vai alla home, fai uno screenshot "
                     + "(tasto laterale + volume giù), torna qui e tocca «Scegli lo screenshot».";
-        } else if (!Store.anyPlacement(this)) {
-            gs = "Sfondo pronto. Ora tocca «Allinea con uno screenshot»: serve a capire "
-                    + "dove si trova il widget sulla home.";
+        } else if (!hasShot) {
+            gs = "Tocca «Prendi lo sfondo dalla home»: l'app ricava dallo screenshot "
+                    + "esattamente ciò che sta dietro al widget.";
         } else {
-            gs = "Sfondo allineato. Se sposti o ridimensioni il widget, rifai l'allineamento.";
+            gs = "Sfondo preso dalla home. Se sposti il widget o cambi sfondo, rifallo.";
         }
         boolean cal = Store.isCalibrating(this);
         TextView align = findViewById(R.id.glass_align);
-        align.setText(cal ? "Scegli lo screenshot" : "Allinea con uno screenshot");
-        align.setVisibility(hasWall ? View.VISIBLE : View.GONE);
+        align.setText(cal ? "Scegli lo screenshot" : "Prendi lo sfondo dalla home");
+        align.setVisibility(View.VISIBLE);
+        findViewById(R.id.glass_pick).setVisibility(View.GONE);
         findViewById(R.id.glass_cancel).setVisibility(cal ? View.VISIBLE : View.GONE);
         findViewById(R.id.glass_pick).setBackgroundResource(hasWall ? R.drawable.bg_button_ghost : R.drawable.bg_button);
         boolean vivid = Store.isVivid(this);
@@ -499,7 +510,11 @@ public class MainActivity extends Activity {
         View preview = findViewById(R.id.preview);
         preview.setClipToOutline(true);
         android.graphics.Bitmap glassPreview = null;
-        if (glass && hasWall) {
+        if (glass && hasShot) {
+            int pw = Math.max(1, preview.getWidth() > 0 ? preview.getWidth() : Math.round(300 * d));
+            glassPreview = Glass.previewShot(this, pw, Math.round(64 * d), selected, opacity,
+                    Store.isVivid(this), Store.getBlur(this));
+        } else if (glass && hasWall) {
             android.graphics.Rect screen = getWindowManager().getMaximumWindowMetrics().getBounds();
             int pw = Math.max(1, preview.getWidth() > 0 ? preview.getWidth() : screen.width() - Math.round(80 * d));
             int ph = Math.round(64 * d);
