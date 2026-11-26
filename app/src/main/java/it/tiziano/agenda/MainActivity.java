@@ -405,6 +405,35 @@ public class MainActivity extends Activity {
         return best;
     }
 
+    /**
+     * Cartelle: lilla al 30%, sfocatura 65%.
+     * One UI 9.5: nessuna tinta, sfocatura fortissima, colori vivaci, riflesso e bordo luminoso.
+     */
+    private void applyPreset(boolean oneUi95) {
+        Store.setVivid(this, oneUi95);
+        Store.setBgColor(this, Store.COLORS[1]);
+        Store.setBgOpacity(this, oneUi95 ? 0 : 30);
+        Store.setBlur(this, oneUi95 ? 90 : 65);
+        Store.setGlassTransparency(this, 0);
+        ((SeekBar) findViewById(R.id.opacity)).setProgress(Store.getBgOpacity(this));
+        ((SeekBar) findViewById(R.id.blur)).setProgress(Store.getBlur(this));
+        ((SeekBar) findViewById(R.id.transp)).setProgress(0);
+        updateLook();
+        new Thread(() -> {
+            try {
+                Glass.rebuild(this);
+            } catch (Exception ignored) {
+                // resta la sfocatura precedente
+            }
+            runOnUiThread(() -> {
+                updateLook();
+                AgendaWidget.renderAll(this);
+                Toast.makeText(this, oneUi95 ? "Stile One UI 9.5" : "Stile come le cartelle",
+                        Toast.LENGTH_SHORT).show();
+            });
+        }).start();
+    }
+
     private void setStyle(int style) {
         Store.setStyle(this, style);
         ((SeekBar) findViewById(R.id.opacity)).setProgress(Store.getBgOpacity(this));
