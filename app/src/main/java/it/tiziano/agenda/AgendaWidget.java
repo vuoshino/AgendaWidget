@@ -107,9 +107,9 @@ public class AgendaWidget extends AppWidgetProvider {
             v.setInt(R.id.bg_fill, "setImageAlpha",
                     Math.round((100 - Store.getGlassTransparency(c)) * 2.55f));
             v.setInt(R.id.bg_shade, "setImageAlpha", 0);
-            int extra = Store.isVivid(c) ? View.VISIBLE : View.GONE;
-            v.setViewVisibility(R.id.bg_glow, extra);
-            v.setViewVisibility(R.id.bg_rim, extra);
+            // Niente bordo: le cartelle di One UI non ce l'hanno, resta solo il riflesso in alto
+            v.setViewVisibility(R.id.bg_glow, Store.isVivid(c) ? View.VISIBLE : View.GONE);
+            v.setViewVisibility(R.id.bg_rim, View.GONE);
         } else {
             v.setViewVisibility(R.id.bg_glow, View.GONE);
             v.setViewVisibility(R.id.bg_rim, View.GONE);
