@@ -22,6 +22,7 @@ public class ActionActivity extends Activity {
     public static final String ACTION_COMPLETE = "complete";
     public static final String ACTION_OPEN_CALENDAR = "open_calendar";
     public static final String ACTION_TOGGLE_OVERDUE = "toggle_overdue";
+    public static final String ACTION_OPEN_WEATHER = "open_weather";
     public static final String EXTRA_WIDGET = "widget";
 
     @Override
@@ -30,7 +31,15 @@ public class ActionActivity extends Activity {
         Intent in = getIntent();
         String action = in != null ? in.getStringExtra(EXTRA_ACTION) : null;
 
-        if (ACTION_TOGGLE_OVERDUE.equals(action)) {
+        if (ACTION_OPEN_WEATHER.equals(action)) {
+            Intent w = getPackageManager().getLaunchIntentForPackage("com.sec.android.daemonapp");
+            if (w == null) {
+                w = new Intent(Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://www.google.com/search?q=meteo+Guidonia+Montecelio"));
+            }
+            start(w);
+            RefreshJob.runNow(this);
+        } else if (ACTION_TOGGLE_OVERDUE.equals(action)) {
             Store.toggleOverdue(this);
             AgendaWidget.renderAll(this);
         } else if (ACTION_OPEN_CALENDAR.equals(action)) {

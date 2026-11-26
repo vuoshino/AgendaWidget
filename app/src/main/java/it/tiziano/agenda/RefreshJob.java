@@ -114,6 +114,13 @@ public class RefreshJob extends JobService {
                 retry = completeTask != null;
             }
         }
+        if (WeatherWidget.hasAny(c)) {
+            try {
+                Weather.refresh(c, false);
+            } catch (Exception ignored) {
+                // resta l'ultima previsione salvata
+            }
+        }
         AgendaWidget.renderAll(c);
         return retry;
     }

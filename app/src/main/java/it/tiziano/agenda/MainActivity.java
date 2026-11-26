@@ -327,38 +327,44 @@ public class MainActivity extends Activity {
 
     private void alignFromShot(android.net.Uri uri) {
         TextView status = findViewById(R.id.glass_status);
-        status.setText("Cerco il widget nello screenshot…");
+        status.setText("Cerco i widget nello screenshot…");
         new Thread(() -> {
-            Calibrate.Result r = null;
+            java.util.List<Calibrate.Result> found = null;
             String error = null;
             try {
-                r = Calibrate.find(this, uri);
+                found = Calibrate.findAll(this, uri);
             } catch (Exception e) {
                 error = e.getMessage() != null ? e.getMessage() : e.toString();
             }
-            final Calibrate.Result res = r;
+            int done = 0;
+            if (found != null) {
+                java.util.Set<Integer> taken = new java.util.HashSet<>();
+                for (Calibrate.Result res : found) {
+                    int id = pickWidget(res.widget.width(), res.widget.height(), taken);
+                    if (id < 0) continue;
+                    taken.add(id);
+                    Store.setPlacement(this, id, res.widget, res.screenW, res.screenH);
+                    if (res.backdrop != null) {
+                        try {
+                            Glass.saveShot(this, id, res.backdrop);
+                        } catch (Exception ignored) {
+                            // resta lo sfondo precedente
+                        }
+                    }
+                    done++;
+                }
+            }
+            final int n = done;
             final String err = error;
             runOnUiThread(() -> {
-                if (res == null) {
-                    Toast.makeText(this, err != null ? "Immagine non valida: " + err
-                            : "Non trovo i segni viola: lo screenshot deve mostrare il widget con i segni sui bordi",
-                            Toast.LENGTH_LONG).show();
+                if (n > 0) {
+                    Store.setCalibrating(this, false);
+                    Toast.makeText(this, n == 1 ? "Widget allineato" : n + " widget allineati",
+                            Toast.LENGTH_SHORT).show();
                 } else {
-                    int id = pickWidget(res.widget.width(), res.widget.height());
-                    if (id >= 0) {
-                        Store.setPlacement(this, id, res.widget, res.screenW, res.screenH);
-                        if (res.backdrop != null) {
-                            try {
-                                Glass.saveShot(this, id, res.backdrop);
-                            } catch (Exception ignored) {
-                                // resta lo sfondo precedente
-                            }
-                        }
-                        Store.setCalibrating(this, false);
-                        Toast.makeText(this, "Widget allineato", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(this, "Nessun widget Agenda sulla home", Toast.LENGTH_LONG).show();
-                    }
+                    Toast.makeText(this, err != null ? "Immagine non valida: " + err
+                            : "Non trovo i segni viola: lo screenshot deve mostrare i widget con i segni sui bordi",
+                            Toast.LENGTH_LONG).show();
                 }
                 AgendaWidget.renderAll(this);
                 updateLook();
@@ -366,16 +372,15 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    /** Con più widget (es. schermo esterno e interno), sceglie quello con le misure più simili. */
-    private int pickWidget(int wPx, int hPx) {
+    /** Il widget (agenda o meteo) con forma e misure più simili al riquadro trovato. */
+    private int pickWidget(int wPx, int hPx, java.util.Set<Integer> taken) {
         android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(this);
-        int[] ids = m.getAppWidgetIds(new android.content.ComponentName(this, AgendaWidget.class));
-        if (ids == null || ids.length == 0) return -1;
-        if (ids.length == 1) return ids[0];
+        int[] ids = Look.allWidgetIds(this);
         float d = getResources().getDisplayMetrics().density;
-        int best = ids[0];
-        float bestDiff = Float.MAX_VALUE;
+        int best = -1;
+        double bestScore = Double.MAX_VALUE;
         for (int id : ids) {
+            if (taken.contains(id)) continue;
             Bundle o = m.getAppWidgetOptions(id);
             int[][] sizes = {
                     {o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
@@ -383,43 +388,21 @@ public class MainActivity extends Activity {
                     {o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH),
                             o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)}};
             for (int[] sz : sizes) {
-                float diff = Math.abs(sz[0] * d - wPx) + Math.abs(sz[1] * d - hPx);
-                if (diff < bestDiff) {
-                    bestDiff = diff;
+                if (sz[0] <= 0 || sz[1] <= 0) continue;
+                double ow = sz[0] * d, oh = sz[1] * d;
+                // conta soprattutto la forma (alto e stretto oppure largo e basso)
+                double score = Math.abs(Math.log((wPx / (double) hPx) / (ow / oh))) * 3
+                        + Math.abs(wPx - ow) / wPx + Math.abs(hPx - oh) / hPx;
+                if (score < bestScore) {
+                    bestScore = score;
                     best = id;
                 }
             }
         }
+        if (best < 0) {
+            for (int id : ids) if (!taken.contains(id)) return id;
+        }
         return best;
-    }
-
-    /**
-     * Cartelle: lilla al 30%, sfocatura 65%.
-     * One UI 9.5: nessuna tinta, sfocatura fortissima, colori vivaci, riflesso e bordo luminoso.
-     */
-    private void applyPreset(boolean oneUi95) {
-        Store.setVivid(this, oneUi95);
-        Store.setBgColor(this, Store.COLORS[1]);
-        Store.setBgOpacity(this, oneUi95 ? 0 : 30);
-        Store.setBlur(this, oneUi95 ? 90 : 65);
-        Store.setGlassTransparency(this, 0);
-        ((SeekBar) findViewById(R.id.opacity)).setProgress(Store.getBgOpacity(this));
-        ((SeekBar) findViewById(R.id.blur)).setProgress(Store.getBlur(this));
-        ((SeekBar) findViewById(R.id.transp)).setProgress(0);
-        updateLook();
-        new Thread(() -> {
-            try {
-                Glass.rebuild(this);
-            } catch (Exception ignored) {
-                // resta la sfocatura precedente
-            }
-            runOnUiThread(() -> {
-                updateLook();
-                AgendaWidget.renderAll(this);
-                Toast.makeText(this, oneUi95 ? "Stile One UI 9.5" : "Stile come le cartelle",
-                        Toast.LENGTH_SHORT).show();
-            });
-        }).start();
     }
 
     private void setStyle(int style) {
@@ -458,13 +441,13 @@ public class MainActivity extends Activity {
         ((TextView) findViewById(R.id.glass_pick)).setText(hasWall ? R.string.glass_change : R.string.glass_pick);
         String gs;
         if (Store.isCalibrating(this)) {
-            gs = "Il widget ora è vuoto, con quattro segni viola sui bordi. Vai alla home, fai uno screenshot "
+            gs = "I widget ora sono vuoti, con quattro segni viola sui bordi. Vai alla home, fai uno screenshot "
                     + "(tasto laterale + volume giù), torna qui e tocca «Scegli lo screenshot».";
         } else if (!hasShot) {
             gs = "Tocca «Prendi lo sfondo dalla home»: l'app ricava dallo screenshot "
-                    + "esattamente ciò che sta dietro al widget.";
+                    + "esattamente ciò che sta dietro ai widget (agenda e meteo insieme).";
         } else {
-            gs = "Sfondo preso dalla home. Se sposti il widget o cambi sfondo, rifallo.";
+            gs = "Sfondo preso dalla home. Se sposti un widget, ne aggiungi uno o cambi sfondo, rifallo.";
         }
         boolean cal = Store.isCalibrating(this);
         TextView align = findViewById(R.id.glass_align);

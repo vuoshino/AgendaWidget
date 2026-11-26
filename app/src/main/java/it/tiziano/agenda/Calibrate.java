@@ -35,8 +35,8 @@ public final class Calibrate {
         }
     }
 
-    /** @return la posizione del widget, oppure null se i segni non si trovano. */
-    public static Result find(Context c, Uri uri) throws IOException {
+    /** @return i widget trovati nello screenshot (anche più di uno), lista vuota se nessuno. */
+    public static List<Result> findAll(Context c, Uri uri) throws IOException {
         Bitmap b = ImageDecoder.decodeBitmap(ImageDecoder.createSource(c.getContentResolver(), uri),
                 (decoder, info, source) -> decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE));
         int w = b.getWidth(), h = b.getHeight();
@@ -80,34 +80,61 @@ public final class Calibrate {
         }
 
         // Orizzontali = segni in alto e in basso, verticali = a sinistra e a destra
-        Rect top = null, bottom = null, left = null, right = null;
+        List<Rect> horiz = new ArrayList<>(), vert = new ArrayList<>();
         for (Rect r : blobs) {
-            if (r.width() > r.height() * 2) {
-                if (top == null || r.top < top.top) top = r;
-                if (bottom == null || r.bottom > bottom.bottom) bottom = r;
-            } else if (r.height() > r.width() * 2) {
-                if (left == null || r.left < left.left) left = r;
-                if (right == null || r.right > right.right) right = r;
+            if (r.width() > r.height()) horiz.add(r); else vert.add(r);
+        }
+        List<Result> results = new ArrayList<>();
+        boolean[] usedH = new boolean[horiz.size()];
+        boolean[] usedV = new boolean[vert.size()];
+        // Ogni widget: un segno in alto e uno in basso sulla stessa verticale,
+        // uno a sinistra e uno a destra sulla stessa orizzontale, che si incrociano al centro
+        for (int t = 0; t < horiz.size(); t++) {
+            if (usedH[t]) continue;
+            Rect top = horiz.get(t);
+            for (int bo = 0; bo < horiz.size(); bo++) {
+                if (bo == t || usedH[bo]) continue;
+                Rect bottom = horiz.get(bo);
+                if (bottom.top <= top.bottom || Math.abs(bottom.centerX() - top.centerX()) > 25) continue;
+                Rect found = null;
+                int li = -1, ri = -1;
+                for (int l = 0; l < vert.size() && found == null; l++) {
+                    if (usedV[l]) continue;
+                    Rect left = vert.get(l);
+                    if (left.centerX() >= top.centerX() || left.centerY() <= top.bottom
+                            || left.centerY() >= bottom.top) continue;
+                    for (int r = 0; r < vert.size(); r++) {
+                        if (r == l || usedV[r]) continue;
+                        Rect right = vert.get(r);
+                        if (right.centerX() <= top.centerX() || Math.abs(right.centerY() - left.centerY()) > 25) continue;
+                        // il segno in alto deve stare a metà tra sinistra e destra
+                        int mid = (left.left + right.right) / 2;
+                        if (Math.abs(mid - top.centerX()) > 25) continue;
+                        int midY = (top.top + bottom.bottom) / 2;
+                        if (Math.abs(midY - left.centerY()) > 25) continue;
+                        found = new Rect(left.left, top.top, right.right, bottom.bottom);
+                        li = l;
+                        ri = r;
+                        break;
+                    }
+                }
+                if (found != null && found.width() >= 50 && found.height() >= 50) {
+                    usedH[t] = usedH[bo] = true;
+                    usedV[li] = usedV[ri] = true;
+                    int inset = Math.max(Math.max(top.height(), bottom.height()),
+                            Math.max(vert.get(li).width(), vert.get(ri).width())) + 4;
+                    Rect inner = new Rect(found);
+                    inner.inset(inset, inset);
+                    Bitmap backdrop = null;
+                    if (inner.width() > 10 && inner.height() > 10) {
+                        backdrop = Bitmap.createBitmap(b, inner.left, inner.top, inner.width(), inner.height());
+                    }
+                    results.add(new Result(found, w, h, backdrop));
+                    break;
+                }
             }
         }
-        if (top == null || bottom == null || left == null || right == null || top == bottom || left == right) {
-            b.recycle();
-            return null;
-        }
-        Rect widget = new Rect(left.left, top.top, right.right, bottom.bottom);
-        if (widget.width() < 50 || widget.height() < 50) {
-            b.recycle();
-            return null;
-        }
-        // Ritaglio interno, oltre lo spessore dei segni
-        int inset = Math.max(Math.max(top.height(), bottom.height()), Math.max(left.width(), right.width())) + 4;
-        Rect inner = new Rect(widget);
-        inner.inset(inset, inset);
-        Bitmap backdrop = null;
-        if (inner.width() > 10 && inner.height() > 10) {
-            backdrop = Bitmap.createBitmap(b, inner.left, inner.top, inner.width(), inner.height());
-        }
         b.recycle();
-        return new Result(widget, w, h, backdrop);
+        return results;
     }
 }

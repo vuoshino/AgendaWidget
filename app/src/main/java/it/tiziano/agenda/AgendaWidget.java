@@ -44,8 +44,13 @@ public class AgendaWidget extends AppWidgetProvider {
         RefreshJob.schedule(context);
     }
 
-    /** Ridisegna tutti i widget presenti sulla home. */
+    /** Ridisegna tutti i widget dell'app presenti sulla home (agenda e meteo). */
     public static void renderAll(Context ctx) {
+        renderAgenda(ctx);
+        WeatherWidget.renderAll(ctx);
+    }
+
+    private static void renderAgenda(Context ctx) {
         Context c = ctx.getApplicationContext();
         AppWidgetManager manager = AppWidgetManager.getInstance(c);
         int[] ids = manager.getAppWidgetIds(new ComponentName(c, AgendaWidget.class));
@@ -53,7 +58,7 @@ public class AgendaWidget extends AppWidgetProvider {
 
         List<AgendaData.Row> rows = AgendaData.build(c);
         for (int id : ids) {
-            Bitmap glass = glassFor(c, manager, id);
+            Bitmap glass = Look.glassFor(c, manager, id);
             Map<SizeF, RemoteViews> sizes = new ArrayMap<>();
             sizes.put(new SizeF(100f, 80f), build(c, id, rows, true, glass));
             sizes.put(new SizeF(WIDE_FROM_DP, 80f), build(c, id, rows, false, glass));
@@ -61,66 +66,11 @@ public class AgendaWidget extends AppWidgetProvider {
         }
     }
 
-    /** Sfondo vetro per questo widget, se lo stile è attivo e la posizione è nota. */
-    private static Bitmap glassFor(Context c, AppWidgetManager manager, int id) {
-        if (Store.getStyle(c) != Store.STYLE_GLASS) return null;
-        if (Glass.hasShot(c, id)) {
-            return Glass.renderShot(c, id, Store.getBgColor(c), Store.getBgOpacity(c),
-                    Store.isVivid(c), Store.getBlur(c));
-        }
-        if (!Glass.hasWallpaper(c)) return null;
-        int[] p = Store.getPlacement(c, id);
-        if (p == null) return null;
-        int[] size = p.length == 6 ? new int[]{p[4], p[5]} : sizePx(c, manager, id, p[2], p[3]);
-        return Glass.render(c, p[0], p[1], size[0], size[1], p[2], p[3],
-                Store.getBgColor(c), Store.getBgOpacity(c), Store.isVivid(c));
-    }
-
-    /** Dimensione del widget in pixel: in verticale vale larghezza minima × altezza massima. */
-    static int[] sizePx(Context c, AppWidgetManager manager, int id, int screenW, int screenH) {
-        Bundle o = manager.getAppWidgetOptions(id);
-        boolean portrait = screenH >= screenW;
-        int wDp = o.getInt(portrait ? AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH
-                : AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH);
-        int hDp = o.getInt(portrait ? AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
-                : AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT);
-        float d = c.getResources().getDisplayMetrics().density;
-        return new int[]{Math.round(wDp * d), Math.round(hDp * d)};
-    }
-
     private static RemoteViews build(Context c, int widgetId, List<AgendaData.Row> rows,
                                      boolean narrow, Bitmap glass) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_agenda);
 
-        // Durante la calibrazione il widget è vuoto: solo i segni, così lo screenshot mostra lo sfondo
-        boolean calibrating = Store.isCalibrating(c);
-        int marks = calibrating ? View.VISIBLE : View.GONE;
-        v.setViewVisibility(R.id.mark_top, marks);
-        v.setViewVisibility(R.id.mark_bottom, marks);
-        v.setViewVisibility(R.id.mark_left, marks);
-        v.setViewVisibility(R.id.mark_right, marks);
-
-        // Sfondo: pieno (colore + opacità) oppure vetro come le cartelle
-        if (glass != null) {
-            v.setImageViewBitmap(R.id.bg_fill, glass);
-            v.setInt(R.id.bg_fill, "setColorFilter", 0);
-            v.setInt(R.id.bg_fill, "setImageAlpha",
-                    Math.round((100 - Store.getGlassTransparency(c)) * 2.55f));
-            v.setInt(R.id.bg_shade, "setImageAlpha", 0);
-            // Niente bordo: le cartelle di One UI non ce l'hanno, resta solo il riflesso in alto
-            v.setViewVisibility(R.id.bg_glow, Store.isVivid(c) ? View.VISIBLE : View.GONE);
-            v.setViewVisibility(R.id.bg_rim, View.GONE);
-        } else {
-            v.setViewVisibility(R.id.bg_glow, View.GONE);
-            v.setViewVisibility(R.id.bg_rim, View.GONE);
-            boolean glassStyle = Store.getStyle(c) == Store.STYLE_GLASS;
-            // In stile vetro, finché la posizione non è nota, una velatura leggera
-            int opacity = glassStyle ? 35 : Store.getBgOpacity(c);
-            int alpha = Math.round(opacity * 2.55f);
-            v.setInt(R.id.bg_fill, "setColorFilter", Store.getBgColor(c));
-            v.setInt(R.id.bg_fill, "setImageAlpha", alpha);
-            v.setInt(R.id.bg_shade, "setImageAlpha", glassStyle ? 0 : alpha);
-        }
+        Look.applyBackground(c, v, glass);
 
         LocalDate today = LocalDate.now();
         Locale it = Locale.ITALIAN;
@@ -163,13 +113,6 @@ public class AgendaWidget extends AppWidgetProvider {
         v.setViewVisibility(R.id.list, empty ? View.GONE : View.VISIBLE);
         v.setViewVisibility(R.id.empty, empty ? View.VISIBLE : View.GONE);
 
-        v.setViewVisibility(R.id.content, calibrating ? View.INVISIBLE : View.VISIBLE);
-        if (calibrating) {
-            v.setInt(R.id.bg_fill, "setImageAlpha", 0);
-            v.setInt(R.id.bg_shade, "setImageAlpha", 0);
-            v.setViewVisibility(R.id.bg_glow, View.GONE);
-            v.setViewVisibility(R.id.bg_rim, View.GONE);
-        }
         return v;
     }
 

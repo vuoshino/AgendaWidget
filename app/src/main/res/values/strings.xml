@@ -21,4 +21,6 @@
     <string name="style_glass">Vetro</string>
     <string name="glass_pick">Scegli lo sfondo della home</string>
     <string name="glass_change">Cambia immagine</string>
+    <string name="weather_name">Meteo</string>
+    <string name="weather_desc">Meteo di Guidonia Montecelio</string>
 </resources>
