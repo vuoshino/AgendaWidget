@@ -114,7 +114,7 @@
     </LinearLayout>
 
     <!-- Spazio elastico: la scheda delle ore resta ancorata in fondo -->
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
