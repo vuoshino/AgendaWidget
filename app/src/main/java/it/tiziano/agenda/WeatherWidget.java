@@ -57,17 +57,22 @@ public class WeatherWidget extends AppWidgetProvider {
             Bitmap glass = Look.glassFor(c, manager, id);
             Map<SizeF, RemoteViews> sizes = new ArrayMap<>();
             // Stretto: 4 ore; largo: 6 ore. Basso: niente fascia oraria.
-            sizes.put(new SizeF(100f, 80f), build(c, data, glass, 0));
-            sizes.put(new SizeF(100f, 175f), build(c, data, glass, 4));
-            sizes.put(new SizeF(250f, 80f), build(c, data, glass, 0));
-            sizes.put(new SizeF(250f, 175f), build(c, data, glass, 6));
+            // Altezza media (es. schermo esterno del Fold): versione compatta senza nome della città.
+            sizes.put(new SizeF(100f, 80f), build(c, data, glass, 0, false));
+            sizes.put(new SizeF(100f, 165f), build(c, data, glass, 4, true));
+            sizes.put(new SizeF(100f, 215f), build(c, data, glass, 4, false));
+            sizes.put(new SizeF(250f, 80f), build(c, data, glass, 0, false));
+            sizes.put(new SizeF(250f, 165f), build(c, data, glass, 6, true));
+            sizes.put(new SizeF(250f, 215f), build(c, data, glass, 6, false));
             manager.updateAppWidget(id, new RemoteViews(sizes));
         }
     }
 
-    private static RemoteViews build(Context c, Weather.Data d, Bitmap glass, int columns) {
+    private static RemoteViews build(Context c, Weather.Data d, Bitmap glass, int columns, boolean compact) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_weather);
         Look.applyBackground(c, v, glass);
+        v.setViewVisibility(R.id.place, compact ? View.GONE : View.VISIBLE);
+        v.setTextViewTextSize(R.id.temp, android.util.TypedValue.COMPLEX_UNIT_SP, compact ? 34f : 38f);
 
         Intent open = new Intent(c, ActionActivity.class)
                 .putExtra(ActionActivity.EXTRA_ACTION, ActionActivity.ACTION_OPEN_WEATHER)
