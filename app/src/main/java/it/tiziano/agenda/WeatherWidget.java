@@ -86,7 +86,7 @@ public class WeatherWidget extends AppWidgetProvider {
         }
         v.setTextViewText(R.id.temp, d.temp + "°");
         v.setTextViewText(R.id.summary, d.summary);
-        v.setTextViewText(R.id.minmax, "↑" + d.max + "°  ↓" + d.min + "°");
+        v.setTextViewText(R.id.minmax, "Max " + d.max + "° · Min " + d.min + "°");
         v.setImageViewResource(R.id.icon, Weather.icon(d.code, d.day));
 
         int n = Math.min(columns, d.hours.size());
@@ -99,6 +99,9 @@ public class WeatherWidget extends AppWidgetProvider {
             Weather.Hour h = d.hours.get(i);
             v.setViewVisibility(COL[i], View.VISIBLE);
             v.setTextViewText(HOUR[i], h.label);
+            // L'ora attuale in bianco pieno, le successive attenuate
+            v.setTextColor(HOUR[i], i == 0 ? 0xFFFFFFFF : 0x99FFFFFF);
+            v.setTextColor(TEMP[i], i == 0 ? 0xFFFFFFFF : 0xCCFFFFFF);
             v.setImageViewResource(ICON[i], Weather.icon(h.code, h.day));
             v.setTextViewText(TEMP[i], h.temp + "°");
             v.setTextViewText(PROB[i], h.prob >= 20 ? h.prob + "%" : "");

@@ -73,7 +73,7 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-light"
                 android:includeFontPadding="false"
-                android:letterSpacing="-0.03"
+                android:letterSpacing="-0.06"
                 android:maxLines="1"
                 android:textColor="@color/text_primary"
                 android:textSize="44sp" />
@@ -88,6 +88,15 @@
                 android:maxLines="1"
                 android:textColor="@color/text_primary"
                 android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/minmax"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:maxLines="1"
+                android:textColor="@color/text_secondary"
+                android:textSize="12.5sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -101,13 +110,6 @@
                 android:layout_width="58dp"
                 android:layout_height="58dp" />
 
-            <TextView
-                android:id="@+id/minmax"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLines="1"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -148,6 +150,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:letterSpacing="-0.08"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -189,6 +192,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:letterSpacing="-0.08"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -230,6 +234,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:letterSpacing="-0.08"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -271,6 +276,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:letterSpacing="-0.08"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -312,6 +318,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:letterSpacing="-0.08"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -353,6 +360,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:letterSpacing="-0.08"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
