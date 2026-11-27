@@ -85,7 +85,8 @@ public class WeatherWidget extends AppWidgetProvider {
             return v;
         }
         v.setTextViewText(R.id.temp, d.temp + "°");
-        v.setTextViewText(R.id.summary, d.summary);
+        // Stretto (4 ore o meno): frase corta, così non viene tagliata
+        v.setTextViewText(R.id.summary, columns == 6 ? d.summary : d.shortSummary);
         v.setTextViewText(R.id.minmax, "Max " + d.max + "° · Min " + d.min + "°");
         v.setImageViewResource(R.id.icon, Weather.icon(d.code, d.day));
 

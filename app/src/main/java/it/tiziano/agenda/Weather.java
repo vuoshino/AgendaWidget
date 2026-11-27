@@ -49,6 +49,8 @@ public final class Weather {
         public int max;
         public int min;
         public String summary = "";
+        /** Versione corta per il widget stretto: prima la pioggia, se c'è. */
+        public String shortSummary = "";
         public final List<Hour> hours = new ArrayList<>();
     }
 
@@ -144,6 +146,10 @@ public final class Weather {
                 }
             }
             d.summary = sb.toString();
+            String extra = sb.length() > describe(d.code).length()
+                    ? sb.substring(describe(d.code).length() + 3) : "";
+            d.shortSummary = extra.isEmpty() ? shortDescribe(d.code)
+                    : Character.toUpperCase(extra.charAt(0)) + extra.substring(1);
             return d;
         } catch (Exception e) {
             return null;
@@ -185,6 +191,14 @@ public final class Weather {
         if (code == 95) return "Temporale";
         if (code >= 96) return "Temporale con grandine";
         return "";
+    }
+
+    public static String shortDescribe(int code) {
+        if (code == 2) return "Parz. nuvoloso";
+        if (code == 96 || code == 99) return "Temporale";
+        if (code == 56 || code == 57) return "Pioggerella";
+        if (code == 85 || code == 86) return "Neve";
+        return describe(code);
     }
 
     public static int icon(int code, boolean day) {
