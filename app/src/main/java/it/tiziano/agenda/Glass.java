@@ -131,7 +131,7 @@ public final class Glass {
             paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
         }
         cv.drawBitmap(blur, src, new Rect(0, 0, outW, outH), paint);
-        if (vivid) cv.drawColor(0x21FFFFFF);
+        if (vivid) cv.drawColor(0x21ECE4FF);
         int a = Math.round(Math.max(0, Math.min(100, strength)) * 2.55f);
         cv.drawColor((tint & 0x00FFFFFF) | (a << 24));
         return out;
@@ -200,7 +200,7 @@ public final class Glass {
         Canvas cv = new Canvas(out);
         cv.drawBitmap(blurred, 0, 0, vividPaint(vivid));
         // Brina: velo chiaro che fa leggere il vetro anche sopra uno sfondo scuro
-        if (vivid) cv.drawColor(0x21FFFFFF);
+        if (vivid) cv.drawColor(0x21ECE4FF);
         int a = Math.round(Math.max(0, Math.min(100, strength)) * 2.55f);
         cv.drawColor((tint & 0x00FFFFFF) | (a << 24));
         return out;
